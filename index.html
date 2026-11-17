@@ -296,6 +296,7 @@ i.vd.u{background:var(--up)} i.vd.d{background:var(--dn)}
   .tabbar button{padding:9px 12px;font-size:13px;min-height:40px}
   .tools{margin-top:10px}
 }
+.omode{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 8px;font-size:12.5px}.omode button{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer;font:inherit}.omode button.on{background:var(--gold,#e6b94c);color:#111;border-color:transparent;font-weight:700}
 </style>
 </head>
 <body>
@@ -404,14 +405,17 @@ i.vd.u{background:var(--up)} i.vd.d{background:var(--dn)}
     </div>
     <div class="tabpane on" id="t1">
         <div class="card" id="optCard" data-col>
-          <h3>Options Volume ตามราคาใช้สิทธิ · COMEX GC1!</h3>
+          <h3>Options ตามราคาใช้สิทธิ · COMEX GC1!</h3>
+          <div class="omode" id="omode" role="radiogroup" aria-label="เกณฑ์หากำแพง"><span class="mut">เกณฑ์กำแพง:</span>
+            <button data-m="vol" class="on">Volume</button><button data-m="oi">OI</button><button data-m="both">ทั้งสอง (รวมกัน)</button></div>
+          <div class="note" id="omHint" style="margin:-2px 0 8px"></div>
           <div class="note" id="optMeta" style="margin:0 0 8px"></div>
           <div class="plan" id="optKpi"></div>
 
           <h3 style="margin-top:12px">แผนตามกฎเลขกลม 00/50</h3>
           <div id="optPlan"></div>
-          <details open class="optD"><summary>ตารางโวลุ่มรายสไตรก์ (Call ▮ Put)</summary><div class="optTbl"><table class="opt" style="margin-top:8px"><thead><tr><th>Strike</th><th>Call ▮ Put (Volume)</th><th class="r">กฎ P/C</th></tr></thead><tbody id="optRows"></tbody></table></div></details>
-          <div class="note">กฎ: Put Vol &gt; Call Vol ที่ Strike = BUY (แนวรับ) · Call &gt; Put = SELL (แนวต้าน) · ดูในรัศมี ±10 จุดรอบเลขกลม · SL 25 จุด · RR 1:2</div>
+          <details open class="optD"><summary>ตารางรายสไตรก์ (Call ▮ Put) · <span id="omName">Volume</span></summary><div class="optTbl"><table class="opt" style="margin-top:8px"><thead><tr><th>Strike</th><th>Call ▮ Put (<span class="omName">Volume</span>)</th><th class="r">กฎ P/C</th></tr></thead><tbody id="optRows"></tbody></table></div></details>
+          <div class="note">กฎ (ตามเกณฑ์ที่เลือก): Put &gt; Call ที่ Strike = BUY (แนวรับ) · Call &gt; Put = SELL (แนวต้าน) · ดูในรัศมี ±10 จุดรอบเลขกลม · SL 25 จุด · RR 1:2</div>
           <div class="ctl mut" style="margin-top:8px;font-size:12px">ส่วนต่าง GC − ราคาบนกราฟ <input type="number" id="basis" step="0.1" value="0"> จุด · ซิงค์จากราคา GC ตอนนี้ <input type="number" id="gcpx" step="0.1" placeholder="เช่น 3865.3" style="width:95px"><button id="gcGo">ซิงค์</button></div>
           <details><summary>อัปเดตข้อมูล Options (วางข้อมูลใหม่)</summary>
             <div style="margin-top:6px">1) เปิดหน้า Options Chain ของ GC1! บน TradingView &nbsp;2) กด F12 → Console แล้ววางโค้ดนี้ (จะคัดลอกผลให้อัตโนมัติ) &nbsp;3) วางผลลงช่องนี้แล้วกด "ใช้ข้อมูล":</div>
@@ -898,16 +902,23 @@ let OPT=JSON.parse(JSON.stringify(OPT_DEFAULT));
 try{const sv=JSON.parse(localStorage.getItem('goldOpt')||'null');if(sv&&sv.rows&&sv.rows.length)OPT=sv}catch(e){}
 let BASIS=0;try{const b=localStorage.getItem('goldBasis');if(b!==null&&b!==''&&!isNaN(+b))BASIS=+b}catch(e){}
 const SNIP="copy(JSON.stringify([...document.querySelectorAll('tr')].filter(r=>r.children.length>=11&&/^[\\d,]{4,6}$/.test(r.children[8].innerText.trim())).map(r=>{const n=i=>{const t=r.children[i].innerText.split('\\n')[0].replace(/[,\\s]/g,'');return /^\\d+$/.test(t)?+t:0};return[n(8),n(6),n(10),n(7),n(9)]})))";
+let OMODE='vol';try{const m=localStorage.getItem('goldOmode');if(m==='vol'||m==='oi'||m==='both')OMODE=m}catch(e){}
+const OMODE_NAME={vol:'Volume',oi:'OI',both:'Volume + OI'};
+function hasOI(){return OPT.rows.some(r=>(r[3]||0)+(r[4]||0)>0)}
+function omode(){return OMODE!=='vol'&&!hasOI()?'vol':OMODE} // no OI in pasted data → fall back to Volume
+function cv(r){const m=omode();return m==='oi'?(r[3]||0):m==='both'?r[1]+(r[3]||0):r[1]}
+function pv(r){const m=omode();return m==='oi'?(r[4]||0):m==='both'?r[2]+(r[4]||0):r[2]}
+function oname(){return OMODE_NAME[omode()]}
 function optStats(){
-  const R=OPT.rows,tc=R.reduce((a,r)=>a+r[1],0),tp=R.reduce((a,r)=>a+r[2],0);
-  const cw=R.reduce((a,r)=>r[1]>a[1]?r:a,R[0]),pw=R.reduce((a,r)=>r[2]>a[2]?r:a,R[0]);
-  const vws=i=>{const s=R.reduce((a,r)=>a+r[i],0);return s?R.reduce((a,r)=>a+r[0]*r[i],0)/s:null};
-  return{tc,tp,pc:tc?tp/tc:null,cw,pw,cV:vws(1),pV:vws(2)};
+  const R=OPT.rows,tc=R.reduce((a,r)=>a+cv(r),0),tp=R.reduce((a,r)=>a+pv(r),0);
+  const cw=R.reduce((a,r)=>cv(r)>cv(a)?r:a,R[0]),pw=R.reduce((a,r)=>pv(r)>pv(a)?r:a,R[0]);
+  const vws=f=>{const s=R.reduce((a,r)=>a+f(r),0);return s?R.reduce((a,r)=>a+r[0]*f(r),0)/s:null};
+  return{tc,tp,pc:tc?tp/tc:null,cw,pw,cwV:cv(cw),pwV:pv(pw),cV:vws(cv),pV:vws(pv)};
 }
 function optLevelPlan(L,spotGC){
   const w=OPT.rows.filter(r=>Math.abs(r[0]-L)<=10);
   if(!w.length)return{L,none:true};
-  const c=w.reduce((a,r)=>a+r[1],0),p=w.reduce((a,r)=>a+r[2],0);
+  const c=w.reduce((a,r)=>a+cv(r),0),p=w.reduce((a,r)=>a+pv(r),0);
   const full=w.length>=4; // 5-pt strikes → up to 5 in window
   if(c===p)return{L,c,p,sig:'WAIT',full};
   const buy=p>c;
@@ -920,17 +931,17 @@ function renderOpt_(){
   if(!OPT.rows.length)return;
   const st=optStats(),px=S.A?S.A.px:null,pxGC=px==null?null:px+BASIS;
   $('#optMeta').innerHTML=`ข้อมูล ณ ${OPT.asof} · สัญญาหมดอายุ ${OPT.exp} · GC Dec ≈ ${f2(OPT.fut)}<br><span class="warn">เป็น Snapshot ไม่อัปเดตอัตโนมัติ — ตลาดเปลี่ยนเร็ว ให้กด "อัปเดตข้อมูล" ด้านล่างก่อนใช้งาน</span>`;
-  const mx=Math.max(...OPT.rows.map(r=>r[1]+r[2]),1);
+  const mx=Math.max(...OPT.rows.map(r=>cv(r)+pv(r)),1),on=oname();
   $('#optKpi').innerHTML=
-    `<div><small>Call Vol รวม</small><b style="color:#4c9be8">${st.tc.toLocaleString()}</b></div>
-     <div><small>Put Vol รวม</small><b class="dn">${st.tp.toLocaleString()}</b></div>
+    `<div><small>Call ${on} รวม</small><b style="color:#4c9be8">${st.tc.toLocaleString()}</b></div>
+     <div><small>Put ${on} รวม</small><b class="dn">${st.tp.toLocaleString()}</b></div>
      <div><small>Put/Call Ratio</small><b class="${st.pc>1?'up':st.pc<1?'dn':''}">${st.pc==null?'--':st.pc.toFixed(2)}</b><small>${st.pc>1?'Put เด่น → เอนเอียง BUY':st.pc<1?'Call เด่น → เอนเอียง SELL':'เท่ากัน'}</small></div>
-     <div><small>Call Wall / Put Wall</small><b><span style="color:#4c9be8">${st.cw[0]}</span> / <span class="dn">${st.pw[0]}</span></b><small>Vol ${st.cw[1]} / ${st.pw[2]}</small></div>
+     <div><small>Call Wall / Put Wall</small><b><span style="color:#4c9be8">${st.cw[0]}</span> / <span class="dn">${st.pw[0]}</span></b><small>${on} ${st.cwV.toLocaleString()} / ${st.pwV.toLocaleString()}</small></div>
      <div><small>ศูนย์ถ่วง Call</small><b>${st.cV?f2(st.cV):'--'}</b></div>
      <div><small>ศูนย์ถ่วง Put</small><b>${st.pV?f2(st.pV):'--'}</b></div>`;
   let near=null;if(pxGC!=null)near=OPT.rows.reduce((a,r)=>Math.abs(r[0]-pxGC)<Math.abs(a[0]-pxGC)?r:a,OPT.rows[0])[0];
   $('#optRows').innerHTML=OPT.rows.slice().sort((a,b)=>b[0]-a[0]).map(r=>{
-    const [k,c,p]=r,sig=p>c?'<span class="up">BUY</span>':c>p?'<span class="dn">SELL</span>':'<span class="mut">—</span>';
+    const k=r[0],c=cv(r),p=pv(r),sig=p>c?'<span class="up">BUY</span>':c>p?'<span class="dn">SELL</span>':'<span class="mut">—</span>';
     return `<tr class="${k===near?'atm':''}"><td class="n">${k}${k===near?' ◂':''}</td>
       <td><div class="ob" style="width:${Math.max(25,(c+p)/mx*100)}%"><i class="c" style="width:${c/(c+p||1)*100}%"></i><i class="p" style="width:${p/(c+p||1)*100}%"></i></div><span class="mut n" style="font-size:11px">C ${c} · P ${p}</span></td>
       <td class="r">${sig}</td></tr>`}).join('');
@@ -1086,14 +1097,25 @@ $('#snip').textContent=SNIP;
 $('#refGo').onclick=()=>{const ref=+$('#ref').value;if(!ref||!S.cs.length)return;const raw=S.cs[S.cs.length-1].close-OFF;OFF=Math.round((ref-raw)*100)/100;$('#off').value=OFF;try{localStorage.setItem('goldOff',OFF)}catch(x){}load()};
 $('#gcGo').onclick=()=>{const gc=+$('#gcpx').value;if(!gc||!S.A)return;BASIS=Math.round((gc-S.A.px)*100)/100;try{localStorage.setItem('goldBasis',BASIS)}catch(x){}refreshAutoOrd();drawLines();renderOpt();renderOrd()};
 $('#basis').onchange=e=>{BASIS=+e.target.value||0;try{localStorage.setItem('goldBasis',BASIS)}catch(x){}refreshAutoOrd();drawLines();renderOpt();renderOrd()};
-$('#optApply').onclick=()=>{
+$('#optApply').onclick=()=>{setTimeout(()=>setOmode(OMODE,true),0);
   try{const rows=parseOpt($('#optIn').value);
     const d=new Date(Date.now()+7*3600e3),pad=n=>String(n).padStart(2,'0');
     OPT={asof:`${pad(d.getUTCDate())}/${pad(d.getUTCMonth()+1)}/${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} (เวลาไทย)`,exp:'ตามที่วางล่าสุด',fut:OPT.fut,rows};
     try{localStorage.setItem('goldOpt',JSON.stringify(OPT))}catch(e){}
     $('#optMsg').textContent=`ใช้ข้อมูล ${rows.length} Strike แล้ว`;if(S.A)wlAdd();refreshAutoOrd();drawLines();renderOpt();renderOrd();
   }catch(e){$('#optMsg').textContent='ผิดพลาด: '+e.message}};
-$('#optReset').onclick=()=>{OPT=JSON.parse(JSON.stringify(OPT_DEFAULT));try{localStorage.removeItem('goldOpt')}catch(e){}$('#optMsg').textContent='กลับเป็นค่าเริ่มต้นแล้ว';refreshAutoOrd();drawLines();renderOpt();renderOrd()};
+function setOmode(m,init){
+  OMODE=m;if(!init){try{localStorage.setItem('goldOmode',m)}catch(e){}}
+  document.querySelectorAll('#omode button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+  const eff=omode(),nm=oname();
+  const a=document.getElementById('omName');if(a)a.textContent=nm;
+  document.querySelectorAll('.omName').forEach(e=>e.textContent=nm);
+  const h=document.getElementById('omHint');if(h)h.textContent=(m!==eff?'ข้อมูลที่วางไม่มีค่า OI — ใช้ Volume แทนชั่วคราว':m==='both'?'รวม Volume + OI ต่อสไตรก์ ก่อนหาจุดที่สูงสุด':'');
+  if(!init){refreshAutoOrd();drawLines();renderOpt();renderOrd()}
+}
+document.querySelectorAll('#omode button').forEach(b=>b.onclick=()=>setOmode(b.dataset.m));
+setOmode(OMODE,true);
+$('#optReset').onclick=()=>{OPT=JSON.parse(JSON.stringify(OPT_DEFAULT));setOmode(OMODE,true);try{localStorage.removeItem('goldOpt')}catch(e){}$('#optMsg').textContent='กลับเป็นค่าเริ่มต้นแล้ว';refreshAutoOrd();drawLines();renderOpt();renderOrd()};
 $('#resetAll').onclick=()=>{
   OFF=9;BASIS=0;S.src='spot';S.tf='1h';
   ORD={on:false,auto:false,src:'walls',slPts:25,rr:2,side:'BUY',entry:0,sl:0,tp:0,lot:0.01,t0:0,list:null};
@@ -1407,7 +1429,7 @@ function buildView(){
     if(px>W.cw){t='เหนือ Call Wall (ทะลุขึ้น)'}else if(px<W.pw){t='ใต้ Put Wall (ทะลุลง)'}
     else if(dp<dc*0.7){d=1;t='ใกล้ Put Wall (แนวรับ)'}else if(dc<dp*0.7){d=-1;t='ใกล้ Call Wall (แนวต้าน)'}else t='อยู่ระหว่างกำแพง';
     add('ตำแหน่งเทียบกำแพง Options',d,t);
-    if(W.pc!=null)add('Put/Call Volume รวม',W.pc>=1.15?1:W.pc<=0.87?-1:0,`P/C = ${W.pc.toFixed(2)}`);
+    if(W.pc!=null)add('Put/Call '+oname()+' รวม',W.pc>=1.15?1:W.pc<=0.87?-1:0,`P/C = ${W.pc.toFixed(2)}`);
   }
   const net=F.reduce((s,x)=>s+x.d,0),nUp=F.filter(x=>x.d>0).length,nDn=F.filter(x=>x.d<0).length;
   const bias=net>=3?'up':net<=-3?'dn':'nt';
@@ -1460,8 +1482,8 @@ function wlWrite(a){try{localStorage.setItem(WL_KEY,JSON.stringify(a.slice(-200)
 function wlAdd(){
   if(!OPT.rows.length||!S.A)return false;
   const st=optStats(),t=parseAsof(OPT.asof)||Date.now(),L=wlRead();
-  if(L.some(e=>Math.abs(e.t-t)<30*60000&&e.cw===st.cw[0]&&e.pw===st.pw[0]))return false;
-  L.push({t,cw:st.cw[0],pw:st.pw[0],basis:BASIS,px:S.A.px});L.sort((x,y)=>x.t-y.t);wlWrite(L);return true}
+  if(L.some(e=>Math.abs(e.t-t)<30*60000&&e.cw===st.cw[0]&&e.pw===st.pw[0]&&(e.m||'vol')===omode()))return false;
+  L.push({t,cw:st.cw[0],pw:st.pw[0],m:omode(),basis:BASIS,px:S.A.px});L.sort((x,y)=>x.t-y.t);wlWrite(L);return true}
 function wlEval(e){
   const cs=S.cs,tf=TFSEC[S.tf],t0=toT(e.t),t1=t0+24*3600;
   if(!cs.length||cs[0].time>t0)return{st:'nodata'};
