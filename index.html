@@ -161,32 +161,112 @@ i.id.h{background:var(--dn)} i.id.m{background:var(--warn)} i.id.l{background:#7
 .nwRow .l2{margin-top:3px;font-size:11.5px;color:var(--mut)}
 .nwRow .l2 b{color:var(--text,#e6e9ef);font-weight:600}
 .nwRow .hn{margin-top:2px;font-size:11px;color:#b9a56a}
+
+/* ===== Layout v2: จัดลำดับความสำคัญ ===== */
+.grid{grid-template-columns:minmax(0,1fr) 420px;align-items:start}
+.topbar{position:sticky;top:0;z-index:60;background:rgba(11,14,19,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:12px;padding:8px 14px;margin-bottom:10px}
+.tbRow{display:flex;align-items:center;gap:14px;flex-wrap:nowrap}
+.topbar .price{margin-left:0;display:flex;align-items:baseline;gap:8px}
+.topbar .price .p{font-size:26px}
+.topbar .brand{font-size:16px;white-space:nowrap}
+.topbar .status{width:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:34vw}
+.topbar .badge{white-space:nowrap}
+.jump{display:none;gap:6px;margin-top:6px;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.jump::-webkit-scrollbar{display:none}
+.jump a{flex:0 0 auto;color:var(--txt);text-decoration:none;font-size:12px;padding:3px 11px;border:1px solid var(--line);border-radius:99px;background:var(--panel2)}
+.jump a:active{border-color:var(--gold);color:var(--gold)}
+.card,.grid>.card{scroll-margin-top:76px}
+.hdr{padding:8px 14px;gap:10px 18px;border-radius:12px}
+.hdr .clk{flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px 16px;flex:1 1 auto;min-width:0}
+.hdr .clk .t{font-size:18px}
+.hdr .clk .ss{align-self:center}
+.hSet{margin:0;font-size:12px;color:var(--mut)}
+.hSet summary{cursor:pointer;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);list-style:none;white-space:nowrap}
+.hSet summary::-webkit-details-marker{display:none}
+.hSet[open]{flex:1 1 100%}
+.hSet[open] summary{border-color:var(--gold);color:var(--gold)}
+.hsBody{margin-top:8px;padding:10px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.02);gap:10px 14px}
+.hsBody select{max-width:100%}
+.chartBar>*{min-width:0;max-width:100%}
+.chartBar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin-bottom:8px}
+.chartBar .toggles{margin:0;gap:6px 8px}
+.chartBar .toggles label{border:1px solid var(--line);border-radius:99px;padding:3px 10px;background:var(--panel2);transition:border-color .15s}
+.chartBar .toggles label:hover{border-color:#394456}
+.chartBar .toggles input:checked + *{}
+#tfs button{min-width:44px}
+.card h3.ch{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;user-select:none}
+.card h3.ch::after{content:'▾';color:var(--mut);font-size:12px;flex:0 0 auto}
+.card.col h3.ch::after{content:'▸'}
+.card.col>*:not(h3){display:none!important}
+.card.col h3{margin-bottom:0}
+.optTbl{max-height:260px;overflow:auto;margin-top:6px}
+.optD{margin-top:10px}
+.optD summary{color:var(--txt);font-size:12.5px}
+#vCard{border-color:rgba(232,184,74,.35)}
+@media(max-width:1100px){
+  .jump{display:flex}
+  .grid{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:700px){
+  .topbar{padding:6px 10px;border-radius:10px;margin-bottom:8px}
+  .tbRow{gap:8px}
+  .topbar .brand .bt{display:none}
+  .topbar .price{flex-direction:column;align-items:flex-start;gap:0;line-height:1.15}
+  .topbar .price .p{font-size:22px}.topbar .price .c{font-size:11px;white-space:nowrap}
+  .topbar .badge{max-width:46vw;overflow:hidden;text-overflow:ellipsis}
+  .topbar .status{max-width:none;flex:0 0 auto}
+  .topbar .status #stxt{display:none}
+  .topbar .badge{font-size:11.5px;padding:2px 8px}
+  .hdr{padding:8px 10px}
+  .hdr .clk{gap:4px 10px}
+  .hdr .clk .t{font-size:16px}
+  .hSet{flex:1 1 100%}
+  .hSet summary{display:block;text-align:center;min-height:34px;padding-top:6px}
+  .hsBody{flex-direction:column;align-items:stretch}
+  .hsBody select,.hsBody button{width:100%}
+  .chartBar{flex-direction:column;align-items:stretch;gap:8px}
+  .chartBar #tfs{width:100%}
+  .chartBar .toggles{flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;padding-bottom:2px;scrollbar-width:none}
+  .chartBar .toggles::-webkit-scrollbar{display:none}
+  .chartBar .toggles label{flex:0 0 auto;min-height:30px}
+  .card,.grid>.card{scroll-margin-top:92px}
+}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <div class="brand"><div class="coin">Au</div><div>วิเคราะห์กราฟทองคำ</div></div>
-    <div class="price"><span class="p" id="px">--</span><span class="c" id="chg">--</span></div>
+  <div class="topbar" id="topbar">
+    <div class="tbRow">
+      <div class="brand"><div class="coin">Au</div><div class="bt">วิเคราะห์กราฟทองคำ</div></div>
+      <div class="price"><span class="p" id="px">--</span><span class="c" id="chg">--</span></div>
+      <span class="badge b-nt" id="vMir" title="สรุปแนวโน้มตาม Timeframe ที่เลือก">--</span>
+      <div class="sp"></div>
+      <div class="status"><span class="dot" id="dot"></span><span id="stxt">กำลังเชื่อมต่อ…</span></div>
+    </div>
+    <nav class="jump"><a href="#chartCard">กราฟ</a><a href="#vCard">สรุป</a><a href="#optCard">Options</a><a href="#ordCard">ออเดอร์</a><a href="#newsCard">ข่าว</a><a href="#mtfCard">หลาย TF</a></nav>
+  </div>
+
+  <header class="hdr">
     <div class="clk" id="clk" title="เวลาประเทศไทย (UTC+7)"><div class="t"><span id="clkT">--:--:--</span> <small id="clkD"></small></div><div class="ss" id="sess">--</div><div class="nx" id="nxt"></div><div class="nx nw" id="nws"></div></div>
-    <div class="sp"></div>
-    <div class="ctl">
-      <select id="src" title="แหล่งข้อมูล">
+    <details class="hSet"><summary>⚙ ตั้งค่า · ปรับราคา <span class="mut" id="hsInfo"></span></summary>
+      <div class="ctl hsBody">
+        <select id="src" title="แหล่งข้อมูล">
         <option value="spot">PAXG/USDT · Spot (ทองคำ 1 oz)</option>
         <option value="fut">XAU/USDT · Perpetual</option>
       </select>
-      <div class="ctl" id="tfs"></div>
-      <label class="ctl mut" style="font-size:12px" title="บวกราคาจาก Binance เพื่อให้ตรงกับราคาทอง/GC ที่ใช้">ราคา + <input type="number" id="off" step="0.5" value="9"> จุด</label>
-      <span class="ctl mut" style="font-size:12px">ซิงค์กับราคา <input type="number" id="ref" step="0.01" placeholder="เช่น 3872.61" style="width:105px"><button id="refGo" title="ใส่ราคาที่เห็นบนกราฟ OANDA/โบรกเกอร์ ณ ตอนนี้ แล้วกดซิงค์">ซิงค์</button></span>
-      <button id="resetAll" title="คืนค่าการตั้งค่าทั้งหมดเป็นค่าเริ่มต้น (ไม่รวมข้อมูล Options ที่วางไว้)">↺ ค่าเริ่มต้น</button>
-    </div>
-    <div class="status"><span class="dot" id="dot"></span><span id="stxt">กำลังเชื่อมต่อ…</span></div>
+        <label class="ctl mut" style="font-size:12px" title="บวกราคาจาก Binance เพื่อให้ตรงกับราคาทอง/GC ที่ใช้">ราคา + <input type="number" id="off" step="0.5" value="9"> จุด</label>
+        <span class="ctl mut" style="font-size:12px">ซิงค์กับราคา <input type="number" id="ref" step="0.01" placeholder="เช่น 3872.61" style="width:105px"><button id="refGo" title="ใส่ราคาที่เห็นบนกราฟ OANDA/โบรกเกอร์ ณ ตอนนี้ แล้วกดซิงค์">ซิงค์</button></span>
+        <button id="resetAll" title="คืนค่าการตั้งค่าทั้งหมดเป็นค่าเริ่มต้น (ไม่รวมข้อมูล Options ที่วางไว้)">↺ ค่าเริ่มต้น</button>
+      </div>
+    </details>
   </header>
 
   <div class="banner" id="banner"></div>
 
   <div class="grid">
-    <div class="card">
+    <div class="card" id="chartCard">
+      <div class="chartBar">
+      <div class="ctl" id="tfs"></div>
       <div class="toggles">
         <label><input type="checkbox" id="tEma"> EMA 20/50/200</label>
         <label><input type="checkbox" id="tBb"> Bollinger Bands</label>
@@ -195,6 +275,7 @@ i.id.h{background:var(--dn)} i.id.m{background:var(--warn)} i.id.l{background:#7
         <label><input type="checkbox" id="tRound"> แนวเลขกลม 00/50</label>
         <label><input type="checkbox" id="tOpt" checked> กำแพง Options (GC)</label>
       </div>
+      </div>
       <div class="pane"><div id="cMain"></div><div class="legend" id="lgMain"></div></div>
       <div class="pane"><span class="tag">RSI (14)</span><div id="cRsi"></div></div>
       <div class="pane"><span class="tag">MACD (12,26,9)</span><div id="cMacd"></div></div>
@@ -202,26 +283,7 @@ i.id.h{background:var(--dn)} i.id.m{background:var(--warn)} i.id.l{background:#7
     </div>
 
     <div class="side">
-      <div class="card" id="newsCard">
-        <h3>ปฏิทินข่าวเศรษฐกิจ <span class="mut" style="font-weight:400">· เวลาไทย</span></h3>
-        <div class="nwTop">
-          <button id="nwPrev" title="วันก่อนหน้า">◀</button>
-          <input type="date" id="nwDate">
-          <button id="nwNext" title="วันถัดไป">▶</button>
-          <button id="nwToday">วันนี้</button>
-        </div>
-        <div class="nwStrip" id="nwStrip"></div>
-        <div class="nwFlt">
-          <select id="nwCur"><option value="USD">USD</option><option value="ALL">ทุกสกุล</option><option>EUR</option><option>GBP</option><option>JPY</option><option>CNY</option><option>CAD</option><option>AUD</option><option>NZD</option></select>
-          <label><input type="checkbox" id="nwH" checked> <i class="id h"></i>สูง</label>
-          <label><input type="checkbox" id="nwM" checked> <i class="id m"></i>กลาง</label>
-          <label><input type="checkbox" id="nwL"> <i class="id l"></i>ต่ำ</label>
-        </div>
-        <div class="nwSum" id="nwSum"></div>
-        <div class="nwList" id="nwList"><div class="mut" style="font-size:12px">กำลังโหลดข่าว…</div></div>
-        <div class="mut" style="font-size:10.5px;margin-top:6px" id="nwNote"></div>
-      </div>
-      <div class="card">
+      <div class="card" id="vCard" data-col>
         <h3>สรุปแนวโน้ม <span class="mut" id="tfName"></span></h3>
         <div class="verdict"><span class="badge b-nt" id="vBadge">--</span><span class="mut" id="vScore"></span></div>
         <div class="gauge"><i id="gMark" style="left:50%"></i></div>
@@ -229,8 +291,25 @@ i.id.h{background:var(--dn)} i.id.m{background:var(--warn)} i.id.l{background:#7
         <ul class="rs" id="reasons"></ul>
       </div>
 
+      <div class="card" id="optCard" data-col>
+        <h3>Options Volume ตามราคาใช้สิทธิ · COMEX GC1!</h3>
+        <div class="note" id="optMeta" style="margin:0 0 8px"></div>
+        <div class="plan" id="optKpi"></div>
 
-      <div class="card" id="ordCard">
+        <h3 style="margin-top:12px">แผนตามกฎเลขกลม 00/50</h3>
+        <div id="optPlan"></div>
+        <details open class="optD"><summary>ตารางโวลุ่มรายสไตรก์ (Call ▮ Put)</summary><div class="optTbl"><table class="opt" style="margin-top:8px"><thead><tr><th>Strike</th><th>Call ▮ Put (Volume)</th><th class="r">กฎ P/C</th></tr></thead><tbody id="optRows"></tbody></table></div></details>
+        <div class="note">กฎ: Put Vol &gt; Call Vol ที่ Strike = BUY (แนวรับ) · Call &gt; Put = SELL (แนวต้าน) · ดูในรัศมี ±10 จุดรอบเลขกลม · SL 25 จุด · RR 1:2</div>
+        <div class="ctl mut" style="margin-top:8px;font-size:12px">ส่วนต่าง GC − ราคาบนกราฟ <input type="number" id="basis" step="0.1" value="0"> จุด · ซิงค์จากราคา GC ตอนนี้ <input type="number" id="gcpx" step="0.1" placeholder="เช่น 3865.3" style="width:95px"><button id="gcGo">ซิงค์</button></div>
+        <details><summary>อัปเดตข้อมูล Options (วางข้อมูลใหม่)</summary>
+          <div style="margin-top:6px">1) เปิดหน้า Options Chain ของ GC1! บน TradingView &nbsp;2) กด F12 → Console แล้ววางโค้ดนี้ (จะคัดลอกผลให้อัตโนมัติ) &nbsp;3) วางผลลงช่องนี้แล้วกด "ใช้ข้อมูล":</div>
+          <code class="sn" id="snip"></code>
+          <textarea id="optIn" placeholder='วาง JSON หรือบรรทัดละ "strike callVol putVol" เช่น&#10;3860 101 159&#10;3865 64 40'></textarea>
+          <div class="ctl" style="margin-top:6px"><button id="optApply">ใช้ข้อมูล</button><button id="optReset">กลับค่าเริ่มต้น</button><span id="optMsg" class="mut"></span></div>
+        </details>
+      </div>
+
+      <div class="card" id="ordCard" data-col>
         <h3>ตั้งออเดอร์ TP / SL (จำลอง) <span class="mut">· วาดเส้นบนกราฟ</span></h3>
         <label class="ctl mut" style="font-size:12px;margin-bottom:6px;gap:6px"><input type="checkbox" id="ordAuto" style="accent-color:var(--gold)"> แสดงออเดอร์อัตโนมัติ</label>
         <div class="ord" style="margin:0 0 8px">
@@ -250,36 +329,38 @@ i.id.h{background:var(--dn)} i.id.m{background:var(--warn)} i.id.l{background:#7
         <div class="note">เป็นเครื่องมือวางแผนและวาดเส้นเท่านั้น <b>ไม่ได้ส่งออเดอร์ไปยังโบรกเกอร์</b> — ต้องไปตั้ง Entry/SL/TP ในแพลตฟอร์มเทรด (เช่น MT5) เอง · คำนวณ 1 Lot = 100 ออนซ์ (1.00 ในราคา = $100 ต่อ Lot) ตรวจสเปคสัญญากับโบรกเกอร์อีกครั้ง</div>
       </div>
 
-      <div class="card">
+      <div class="card" id="newsCard" data-col>
+        <h3>ปฏิทินข่าวเศรษฐกิจ <span class="mut" style="font-weight:400">· เวลาไทย</span></h3>
+        <div class="nwTop">
+          <button id="nwPrev" title="วันก่อนหน้า">◀</button>
+          <input type="date" id="nwDate">
+          <button id="nwNext" title="วันถัดไป">▶</button>
+          <button id="nwToday">วันนี้</button>
+        </div>
+        <div class="nwStrip" id="nwStrip"></div>
+        <div class="nwFlt">
+          <select id="nwCur"><option value="USD">USD</option><option value="ALL">ทุกสกุล</option><option>EUR</option><option>GBP</option><option>JPY</option><option>CNY</option><option>CAD</option><option>AUD</option><option>NZD</option></select>
+          <label><input type="checkbox" id="nwH" checked> <i class="id h"></i>สูง</label>
+          <label><input type="checkbox" id="nwM" checked> <i class="id m"></i>กลาง</label>
+          <label><input type="checkbox" id="nwL"> <i class="id l"></i>ต่ำ</label>
+        </div>
+        <div class="nwSum" id="nwSum"></div>
+        <div class="nwList" id="nwList"><div class="mut" style="font-size:12px">กำลังโหลดข่าว…</div></div>
+        <div class="mut" style="font-size:10.5px;margin-top:6px" id="nwNote"></div>
+      </div>
+
+      <div class="card" id="mtfCard" data-col>
         <h3>ภาพรวมหลาย Timeframe</h3>
         <table><thead><tr><th>TF</th><th>แนวโน้ม</th><th class="r">RSI</th><th class="r">คะแนน</th></tr></thead><tbody id="mtf"></tbody></table>
         <div class="note" id="mtfSum"></div>
       </div>
 
-
-      <div class="card" id="optCard">
-        <h3>Options Volume ตามราคาใช้สิทธิ · COMEX GC1!</h3>
-        <div class="note" id="optMeta" style="margin:0 0 8px"></div>
-        <div class="plan" id="optKpi"></div>
-        <table class="opt" style="margin-top:8px"><thead><tr><th>Strike</th><th>Call ▮ Put (Volume)</th><th class="r">กฎ P/C</th></tr></thead><tbody id="optRows"></tbody></table>
-        <h3 style="margin-top:12px">แผนตามกฎเลขกลม 00/50</h3>
-        <div id="optPlan"></div>
-        <div class="note">กฎ: Put Vol &gt; Call Vol ที่ Strike = BUY (แนวรับ) · Call &gt; Put = SELL (แนวต้าน) · ดูในรัศมี ±10 จุดรอบเลขกลม · SL 25 จุด · RR 1:2</div>
-        <div class="ctl mut" style="margin-top:8px;font-size:12px">ส่วนต่าง GC − ราคาบนกราฟ <input type="number" id="basis" step="0.1" value="0"> จุด · ซิงค์จากราคา GC ตอนนี้ <input type="number" id="gcpx" step="0.1" placeholder="เช่น 3865.3" style="width:95px"><button id="gcGo">ซิงค์</button></div>
-        <details><summary>อัปเดตข้อมูล Options (วางข้อมูลใหม่)</summary>
-          <div style="margin-top:6px">1) เปิดหน้า Options Chain ของ GC1! บน TradingView &nbsp;2) กด F12 → Console แล้ววางโค้ดนี้ (จะคัดลอกผลให้อัตโนมัติ) &nbsp;3) วางผลลงช่องนี้แล้วกด "ใช้ข้อมูล":</div>
-          <code class="sn" id="snip"></code>
-          <textarea id="optIn" placeholder='วาง JSON หรือบรรทัดละ "strike callVol putVol" เช่น&#10;3860 101 159&#10;3865 64 40'></textarea>
-          <div class="ctl" style="margin-top:6px"><button id="optApply">ใช้ข้อมูล</button><button id="optReset">กลับค่าเริ่มต้น</button><span id="optMsg" class="mut"></span></div>
-        </details>
-      </div>
-
-      <div class="card">
+      <div class="card" id="lvCard" data-col>
         <h3>ระดับราคาสำคัญ</h3>
         <table><thead><tr><th>ระดับ</th><th>ราคา</th><th class="r">ห่าง</th></tr></thead><tbody id="levels"></tbody></table>
       </div>
 
-      <div class="card">
+      <div class="card" id="planCard" data-col>
         <h3>ตัวอย่างแผนเทรด (อิง ATR)</h3>
         <div id="plan"></div>
         <div class="note">SL = 1.5×ATR(14) · TP คำนวณที่ RR 1:2 และ 1:3 · เป็นการคำนวณตามสูตรเพื่อประกอบการศึกษา ไม่ใช่คำแนะนำการลงทุน</div>
@@ -1020,6 +1101,26 @@ buildTfs();load();
   bind();render();load();
   setInterval(()=>{render();topLine();},30000);
   setInterval(load,15*60000);
+})();
+
+/* ---------- Layout helpers: พับ/ขยายการ์ด + สรุปบนแถบบน ---------- */
+(function(){
+  let S={};try{S=JSON.parse(localStorage.getItem('goldCol')||'{}');}catch(e){}
+  const DEF={lvCard:1,planCard:1};
+  document.querySelectorAll('.card[data-col]').forEach(c=>{
+    const h=c.querySelector(':scope>h3');if(!h)return;
+    const col=(c.id in S)?!!S[c.id]:!!DEF[c.id];
+    c.classList.toggle('col',col);h.classList.add('ch');
+    h.addEventListener('click',()=>{c.classList.toggle('col');S[c.id]=c.classList.contains('col');try{localStorage.setItem('goldCol',JSON.stringify(S));}catch(e){}});
+  });
+  const $=id=>document.getElementById(id);
+  function mirror(){
+    const vb=$('vBadge'),vm=$('vMir');
+    if(vb&&vm){vm.className=vb.className;vm.textContent=($('tfName')?($('tfName').textContent||'').replace(/[()·]/g,'').trim()+' ':'')+vb.textContent;}
+    const hs=$('hsInfo'),o=$('off'),sr=$('src');
+    if(hs&&o&&sr)hs.textContent='· ราคา +'+o.value+' · '+(sr.value==='fut'?'XAU Perp':'PAXG Spot');
+  }
+  mirror();setInterval(mirror,700);
 })();
 </script>
 </body>
