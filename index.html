@@ -128,6 +128,14 @@ body{overflow-x:hidden}
   .note{font-size:11px}
   .banner{font-size:13px}
 }
+.clk{display:flex;flex-direction:column;gap:2px;line-height:1.2}
+.clk .t{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+.clk .t small{font-size:11px;font-weight:400;color:var(--mut,#8b95a7);margin-left:4px}
+.clk .ss{font-size:11.5px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);align-self:flex-start;white-space:nowrap}
+.clk .ss.hot{background:rgba(240,185,11,.15);border-color:#f0b90b;color:#f0b90b}
+.clk .ss.on{background:rgba(14,203,129,.12);border-color:#0ecb81;color:#0ecb81}
+.clk .ss.off{color:#8b95a7}
+.clk .ss.news{background:rgba(246,70,93,.15);border-color:#f6465d;color:#f6465d}
 </style>
 </head>
 <body>
@@ -135,6 +143,7 @@ body{overflow-x:hidden}
   <header>
     <div class="brand"><div class="coin">Au</div><div>วิเคราะห์กราฟทองคำ</div></div>
     <div class="price"><span class="p" id="px">--</span><span class="c" id="chg">--</span></div>
+    <div class="clk" id="clk" title="เวลาประเทศไทย (UTC+7)"><div class="t"><span id="clkT">--:--:--</span> <small id="clkD"></small></div><div class="ss" id="sess">--</div></div>
     <div class="sp"></div>
     <div class="ctl">
       <select id="src" title="แหล่งข้อมูล">
@@ -798,6 +807,36 @@ $('#resetAll').onclick=()=>{
 };
 bindOrd();
 buildTfs();load();
+
+/* ---------- นาฬิกา + เซสชันตลาด ---------- */
+(function(){
+  const pick=(d,tz)=>{const f=new Intl.DateTimeFormat('en-GB',{timeZone:tz,hour12:false,weekday:'short',hour:'2-digit',minute:'2-digit'}).formatToParts(d);const o={};f.forEach(x=>o[x.type]=x.value);return {wd:o.weekday,m:(+o.hour%24)*60+ +o.minute};};
+  const bkk=new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const bkkD=new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',weekday:'short',day:'numeric',month:'short'});
+  function tick(){
+    const d=new Date();
+    const T=document.getElementById('clkT'),D=document.getElementById('clkD'),S=document.getElementById('sess');
+    if(!T)return;
+    T.textContent=bkk.format(d); D.textContent=bkkD.format(d)+' · เวลาไทย';
+    const ln=pick(d,'Europe/London'), ny=pick(d,'America/New_York'), th=pick(d,'Asia/Bangkok');
+    const wk=['Sat','Sun'];
+    const closed=(ny.wd==='Sat')||(ny.wd==='Fri'&&ny.m>=17*60)||(ny.wd==='Sun'&&ny.m<18*60);
+    const wkLn=!wk.includes(ln.wd), wkNy=!wk.includes(ny.wd);
+    const inL=wkLn&&ln.m>=8*60&&ln.m<16*60+30;
+    const inN=wkNy&&ny.m>=8*60+20&&ny.m<17*60;
+    const news=wkNy&&ny.m>=8*60+15&&ny.m<9*60+15; // ช่วงข่าวสหรัฐฯ 08:30 ET (โดยทั่วไป)
+    let txt,cls;
+    if(closed){txt='ตลาดทองปิด (สุดสัปดาห์)';cls='off';}
+    else if(news){txt='⚠ ช่วงข่าวสหรัฐฯ — ผันผวนสูง';cls='news';}
+    else if(inL&&inN){txt='🔥 ลอนดอน+นิวยอร์ก ซ้อนกัน (แรงที่สุด)';cls='hot';}
+    else if(inN){txt='นิวยอร์กเปิด';cls='on';}
+    else if(inL){txt='ลอนดอนเปิด';cls='on';}
+    else if(th.m>=7*60&&th.m<14*60){txt='ตลาดเอเชีย (วอลุ่มต่ำ)';cls='off';}
+    else{txt='นอกเวลาหลัก (วอลุ่มบาง)';cls='off';}
+    S.textContent=txt; S.className='ss '+cls;
+  }
+  tick(); setInterval(tick,1000);
+})();
 </script>
 </body>
 </html>
