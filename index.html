@@ -137,6 +137,30 @@ body{overflow-x:hidden}
 .clk .nx{font-size:11.5px;color:#8b95a7}
 .clk .ss.off{color:#8b95a7}
 .clk .ss.news{background:rgba(246,70,93,.15);border-color:#f6465d;color:#f6465d}
+.clk .nx.nw{color:#f0a43a}
+.nwTop{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.nwTop input[type=date]{flex:1;min-width:0}
+.nwStrip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px}
+.nwStrip button{padding:4px 0;font-size:11px;line-height:1.25;position:relative}
+.nwStrip button b{display:block;font-size:13px}
+.nwStrip button i{position:absolute;top:3px;right:4px;width:6px;height:6px;border-radius:50%;background:var(--dn)}
+.nwFlt{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font-size:12px;margin-bottom:8px}
+.nwFlt select{padding:3px 6px}
+.nwFlt label{display:flex;align-items:center;gap:4px;cursor:pointer}
+i.id{display:inline-block;width:8px;height:8px;border-radius:50%;background:#666}
+i.id.h{background:var(--dn)} i.id.m{background:var(--warn)} i.id.l{background:#7b8494}
+.nwSum{font-size:12px;margin-bottom:6px}
+.nwList{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto}
+.nwRow{border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12.5px}
+.nwRow.past{opacity:.5}
+.nwRow.nextEv{border-color:var(--gold);background:rgba(232,184,74,.08)}
+.nwRow .l1{display:flex;gap:8px;align-items:center}
+.nwRow .tm{font-weight:700;font-variant-numeric:tabular-nums;min-width:42px}
+.nwRow .cu{font-size:11px;color:var(--mut);min-width:28px}
+.nwRow .ti{flex:1;min-width:0}
+.nwRow .l2{margin-top:3px;font-size:11.5px;color:var(--mut)}
+.nwRow .l2 b{color:var(--text,#e6e9ef);font-weight:600}
+.nwRow .hn{margin-top:2px;font-size:11px;color:#b9a56a}
 </style>
 </head>
 <body>
@@ -144,7 +168,7 @@ body{overflow-x:hidden}
   <header>
     <div class="brand"><div class="coin">Au</div><div>วิเคราะห์กราฟทองคำ</div></div>
     <div class="price"><span class="p" id="px">--</span><span class="c" id="chg">--</span></div>
-    <div class="clk" id="clk" title="เวลาประเทศไทย (UTC+7)"><div class="t"><span id="clkT">--:--:--</span> <small id="clkD"></small></div><div class="ss" id="sess">--</div><div class="nx" id="nxt"></div></div>
+    <div class="clk" id="clk" title="เวลาประเทศไทย (UTC+7)"><div class="t"><span id="clkT">--:--:--</span> <small id="clkD"></small></div><div class="ss" id="sess">--</div><div class="nx" id="nxt"></div><div class="nx nw" id="nws"></div></div>
     <div class="sp"></div>
     <div class="ctl">
       <select id="src" title="แหล่งข้อมูล">
@@ -178,6 +202,25 @@ body{overflow-x:hidden}
     </div>
 
     <div class="side">
+      <div class="card" id="newsCard">
+        <h3>ปฏิทินข่าวเศรษฐกิจ <span class="mut" style="font-weight:400">· เวลาไทย</span></h3>
+        <div class="nwTop">
+          <button id="nwPrev" title="วันก่อนหน้า">◀</button>
+          <input type="date" id="nwDate">
+          <button id="nwNext" title="วันถัดไป">▶</button>
+          <button id="nwToday">วันนี้</button>
+        </div>
+        <div class="nwStrip" id="nwStrip"></div>
+        <div class="nwFlt">
+          <select id="nwCur"><option value="USD">USD</option><option value="ALL">ทุกสกุล</option><option>EUR</option><option>GBP</option><option>JPY</option><option>CNY</option><option>CAD</option><option>AUD</option><option>NZD</option></select>
+          <label><input type="checkbox" id="nwH" checked> <i class="id h"></i>สูง</label>
+          <label><input type="checkbox" id="nwM" checked> <i class="id m"></i>กลาง</label>
+          <label><input type="checkbox" id="nwL"> <i class="id l"></i>ต่ำ</label>
+        </div>
+        <div class="nwSum" id="nwSum"></div>
+        <div class="nwList" id="nwList"><div class="mut" style="font-size:12px">กำลังโหลดข่าว…</div></div>
+        <div class="mut" style="font-size:10.5px;margin-top:6px" id="nwNote"></div>
+      </div>
       <div class="card">
         <h3>สรุปแนวโน้ม <span class="mut" id="tfName"></span></h3>
         <div class="verdict"><span class="badge b-nt" id="vBadge">--</span><span class="mut" id="vScore"></span></div>
@@ -865,6 +908,118 @@ buildTfs();load();
     N.textContent=b?('ถัดไป: '+NAME[b.k]+' '+hm(b.s)+'–'+hm(b.e)+dayTag(b.s,d)):'';
   }
   tick(); setInterval(tick,1000);
+})();
+
+/* ---------- ปฏิทินข่าวเศรษฐกิจ (ข้อมูลจาก news.json ที่ GitHub Actions อัปเดตทุกชั่วโมง) ---------- */
+(function(){
+  const KEY='goldNews',DAY=86400000;
+  let st={cur:'USD',H:true,M:true,L:false,day:null};
+  try{Object.assign(st,JSON.parse(localStorage.getItem(KEY)||'{}'));}catch(e){}
+  st.day=null;
+  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({cur:st.cur,H:st.H,M:st.M,L:st.L}));}catch(e){}};
+  const $=id=>document.getElementById(id);
+  const kF=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok'});
+  const hF=new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',hour12:false,hour:'2-digit',minute:'2-digit'});
+  const wF=new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',weekday:'short'});
+  const dF=new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',weekday:'long',day:'numeric',month:'long'});
+  const dayKey=ms=>kF.format(ms), hm=ms=>hF.format(ms);
+  const noon=k=>Date.parse(k+'T12:00:00+07:00');
+  let EV=[],upd=null,loaded=false,failed=false;
+
+  const NUM=v=>{if(v==null||v==='')return null;const m=String(v).replace(/,/g,'').match(/-?\d+(\.\d+)?/);if(!m)return null;let n=parseFloat(m[0]);const u=String(v).trim().slice(-1);if(u==='K')n*=1e3;else if(u==='M')n*=1e6;else if(u==='B')n*=1e9;else if(u==='T')n*=1e12;return n;};
+  function hint(e){
+    if(e.country!=='USD')return '';
+    const t=e.title;
+    if(/Unemployment Claims|Unemployment Rate|Continuing Claims/i.test(t))return 'สูงกว่าคาด = ตลาดแรงงานอ่อน → USD อ่อน ทองมักขึ้น';
+    if(/FOMC|Fed Chair|Powell|Federal Funds|Meeting Minutes|Fed .*Speaks|Beige Book/i.test(t))return 'ฟังท่าทีดอกเบี้ย: เข้มงวด (hawkish) กดทอง · ผ่อนคลาย (dovish) หนุนทอง';
+    if(/CPI|PPI|PCE|Price|Inflation|Deflator/i.test(t))return 'สูงกว่าคาด = เงินเฟ้อร้อน → ดอกเบี้ยสูงนาน → USD แข็ง ทองมักลง';
+    if(/Bond Auction|Note Auction|Bill Auction/i.test(t))return 'ยีลด์ประมูลสูง → กดทอง · ต่ำ → หนุนทอง';
+    if(/Non-Farm|Payroll|Employment|Earnings|JOLTS|GDP|Retail Sales|PMI|ISM|Durable|Housing|Home Sales|Sentiment|Confidence|Industrial Production|Manufacturing|Services|Trade Balance/i.test(t))return 'สูงกว่าคาด = เศรษฐกิจแกร่ง → USD แข็ง ทองมักลง · ต่ำกว่าคาดมักตรงข้าม';
+    return '';
+  }
+  function rel(ms,now){
+    const m=Math.round((ms-now)/60000);
+    if(m<=0)return '';
+    const h=Math.floor(m/60),r=m%60;
+    return 'อีก '+(h?h+' ชม. ':'')+(r?r+' น.':'');
+  }
+  function arrow(e){
+    const f=NUM(e.forecast),p=NUM(e.previous);
+    if(f==null||p==null||f===p)return '';
+    return f>p?' <span class="up">▲</span>':' <span class="dn">▼</span>';
+  }
+  const esc=x=>String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const pass=e=>(st.cur==='ALL'||e.country===st.cur)&&(e.impact==='High'?st.H:e.impact==='Medium'?st.M:st.L);
+
+  function render(){
+    if(!$('newsCard'))return;
+    const now=Date.now(),today=dayKey(now),sel=st.day||today;
+    $('nwDate').value=sel;
+    // แถบ 7 วัน
+    const strip=$('nwStrip');strip.innerHTML='';
+    for(let i=-1;i<=5;i++){
+      const ms=noon(today)+i*DAY,k=dayKey(ms);
+      const hot=EV.some(e=>dayKey(e.t)===k&&e.country==='USD'&&e.impact==='High');
+      const b=document.createElement('button');
+      b.innerHTML=wF.format(ms)+'<b>'+Number(k.slice(8))+'</b>'+(hot?'<i></i>':'');
+      if(k===sel)b.className='on';
+      b.title=k===today?'วันนี้':'';
+      b.onclick=()=>{st.day=k;render();};
+      strip.appendChild(b);
+    }
+    const list=$('nwList');
+    if(!loaded){list.innerHTML='<div class="mut" style="font-size:12px">'+(failed?'ยังไม่มีข้อมูลข่าว (ระบบจะอัปเดตเองทุกชั่วโมงเมื่อเปิดผ่านเว็บ GitHub Pages)':'กำลังโหลดข่าว…')+'</div>';$('nwSum').textContent='';return;}
+    const dayAll=EV.filter(e=>dayKey(e.t)===sel);
+    const rows=dayAll.filter(pass);
+    const hi=dayAll.filter(e=>e.country==='USD'&&e.impact==='High');
+    $('nwSum').innerHTML='<b>'+dF.format(noon(sel))+'</b> — ข่าว USD แรง '+(hi.length?'<span class="dn"><b>'+hi.length+'</b> รายการ</span> ('+hi.map(e=>hm(e.t)).join(', ')+')':'<span class="mut">ไม่มี</span>');
+    list.innerHTML='';
+    if(!rows.length){list.innerHTML='<div class="mut" style="font-size:12px">ไม่มีข่าวตามตัวกรองในวันนี้</div>';}
+    const nextIdx=rows.findIndex(e=>e.t>now);
+    rows.forEach((e,i)=>{
+      const d=document.createElement('div');
+      d.className='nwRow'+(e.t<=now?' past':'')+(i===nextIdx?' nextEv':'');
+      const cd=i===nextIdx?rel(e.t,now):'';
+      const h=hint(e);
+      d.innerHTML='<div class="l1"><span class="tm">'+hm(e.t)+'</span><span class="cu">'+esc(e.country)+'</span><i class="id '+(e.impact==='High'?'h':e.impact==='Medium'?'m':'l')+'"></i><span class="ti">'+esc(e.title)+'</span>'+(cd?'<span class="warn" style="font-size:11px">'+cd+'</span>':'')+'</div>'
+        +'<div class="l2">คาดการณ์ <b>'+(esc(e.forecast)||'–')+'</b>'+arrow(e)+' · ก่อนหน้า <b>'+(esc(e.previous)||'–')+'</b></div>'
+        +(h?'<div class="hn">💡 '+esc(h)+'</div>':'');
+      list.appendChild(d);
+    });
+    $('nwNote').textContent='ที่มา: ForexFactory (อัปเดตทุกชั่วโมง'+(upd?' · ล่าสุด '+hm(upd)+' '+dayKey(upd).slice(5):'')+') · 💡 เป็นแนวทางทั่วไป ไม่ใช่คำทำนายราคา · ค่าจริงต้องดูตอนข่าวออก';
+  }
+  function topLine(){
+    const el=$('nws');if(!el)return;
+    const now=Date.now();
+    const n=EV.find(e=>e.country==='USD'&&e.impact==='High'&&e.t>now);
+    if(!n){el.textContent=loaded?'':'';return;}
+    const k=dayKey(n.t),t=dayKey(now);
+    const tag=k===t?'':(k===dayKey(now+DAY)?' (พรุ่งนี้)':' ('+wF.format(n.t)+')');
+    el.textContent='ข่าวแรงถัดไป: '+hm(n.t)+tag+' '+n.title+' · '+rel(n.t,now);
+    el.title=n.title;
+  }
+  function bind(){
+    $('nwCur').value=st.cur;$('nwH').checked=st.H;$('nwM').checked=st.M;$('nwL').checked=st.L;
+    $('nwCur').onchange=e=>{st.cur=e.target.value;save();render();};
+    for(const [id,k] of [['nwH','H'],['nwM','M'],['nwL','L']])$(id).onchange=e=>{st[k]=e.target.checked;save();render();};
+    const shift=n=>{const base=st.day||dayKey(Date.now());st.day=dayKey(noon(base)+n*DAY);render();};
+    $('nwPrev').onclick=()=>shift(-1);$('nwNext').onclick=()=>shift(1);
+    $('nwToday').onclick=()=>{st.day=null;render();};
+    $('nwDate').onchange=e=>{if(e.target.value){st.day=e.target.value;render();}};
+  }
+  async function load(){
+    try{
+      const r=await fetch('news.json?'+Math.floor(Date.now()/600000),{cache:'no-store'});
+      if(!r.ok)throw new Error(r.status);
+      const j=await r.json();
+      EV=(j.events||[]).map(e=>({t:Date.parse(e.date),title:e.title||'',country:e.country||'',impact:(e.impact==='High'||e.impact==='Medium')?e.impact:'Low',forecast:e.forecast,previous:e.previous})).filter(e=>!isNaN(e.t)).sort((a,b)=>a.t-b.t);
+      upd=j.updated?Date.parse(j.updated):null;loaded=true;failed=false;
+    }catch(e){failed=true;}
+    render();topLine();
+  }
+  bind();render();load();
+  setInterval(()=>{render();topLine();},30000);
+  setInterval(load,15*60000);
 })();
 </script>
 </body>
