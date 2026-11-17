@@ -84,6 +84,50 @@ input[type=number]{background:var(--panel2);color:var(--txt);border:1px solid va
 .banner{display:none;margin-top:14px;padding:12px 14px;border:1px solid rgba(246,70,93,.5);background:rgba(246,70,93,.1);border-radius:10px;color:#ffc9d0}
 .banner.show{display:block}
 .disc{margin-top:14px;font-size:12px;color:var(--mut);text-align:center}
+
+html{-webkit-text-size-adjust:100%}
+body{overflow-x:hidden}
+.side .card{overflow-x:auto}
+@media(max-width:900px){
+  .grid{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:700px){
+  body{font-size:13.5px}
+  .wrap{padding:8px}
+  header{padding:10px 12px;gap:8px}
+  .brand{font-size:15px}.brand .coin{width:26px;height:26px;font-size:11px}
+  .price{margin-left:auto;gap:8px}.price .p{font-size:24px}.price .c{font-size:12px}
+  .sp{display:none}
+  header .ctl{width:100%;gap:6px}
+  header select{flex:1 1 100%;min-height:38px}
+  #tfs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+  #tfs button{padding:9px 0;min-height:38px}
+  header label.ctl,header span.ctl{flex-wrap:nowrap;justify-content:space-between}
+  header input[type=number]{flex:1;min-width:0;width:auto}
+  #ref{width:auto!important}
+  header button{min-height:38px}
+  #resetAll{width:100%}
+  .status{width:100%}
+  .grid{gap:10px;margin-top:10px}
+  .card{padding:10px;border-radius:10px}
+  .toggles{gap:8px 14px;font-size:12.5px}
+  .toggles label{min-height:28px}
+  #cMain{height:340px}#cRsi{height:96px}#cMacd{height:110px}
+  .legend{gap:8px;font-size:10.5px;top:20px}
+  .legend span:nth-child(n+5){display:none}
+  .pane .tag{font-size:10px}
+  .price .p{font-variant-numeric:tabular-nums}
+  td,th{padding:5px 3px;font-size:12px}
+  .opt td{font-size:12px}
+  .ob{min-width:80px}
+  .plan b{font-size:14px}.kv b{font-size:13px}
+  .kv{grid-template-columns:1fr}
+  input,select,textarea{font-size:16px}
+  .ord input,.ord select{font-size:16px;min-height:38px}
+  .card button{min-height:38px}
+  .note{font-size:11px}
+  .banner{font-size:13px}
+}
 </style>
 </head>
 <body>
@@ -321,9 +365,12 @@ async function klines(src,tf,limit){
 }
 
 /* ============ Charts ============ */
-const base={layout:{background:{type:'solid',color:'#12171f'},textColor:'#8b96a6',fontFamily:"'Noto Sans Thai',system-ui,sans-serif"},
+const MOB=()=>window.innerWidth<=700;
+const base={layout:{background:{type:'solid',color:'#12171f'},textColor:'#8b96a6',fontSize:MOB()?10:12,fontFamily:"'Noto Sans Thai',system-ui,sans-serif"},
+  handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},
+  handleScale:{axisPressedMouseMove:true,mouseWheel:true,pinch:true},
   grid:{vertLines:{color:'#1a212c'},horzLines:{color:'#1a212c'}},
-  rightPriceScale:{borderColor:'#232b38',minimumWidth:78},
+  rightPriceScale:{borderColor:'#232b38',minimumWidth:MOB()?56:78},
   timeScale:{borderColor:'#232b38',timeVisible:true,secondsVisible:false,rightOffset:6},
   crosshair:{mode:0}};
 const chMain=LightweightCharts.createChart($('#cMain'),{...base,height:470,autoSize:true});
@@ -366,12 +413,13 @@ class PosBox{
       const rect=(ya,yb,fill)=>{const top=Math.min(ya,yb)*vr,h=Math.abs(yb-ya)*vr;ctx.fillStyle=fill;ctx.fillRect(X0,top,X1-X0,h)};
       rect(yE,yT,'rgba(46,189,133,0.20)');rect(yE,yS,'rgba(246,70,93,0.22)');
       ctx.fillStyle='rgba(230,234,240,.85)';ctx.fillRect(X0,Math.round(yE*vr)-1,X1-X0,Math.max(1,Math.round(vr)));
-      const fs=Math.round(12*hr);ctx.font=fs+"px 'Noto Sans Thai',system-ui,sans-serif";ctx.textBaseline='middle';
-      const mult=100*d.lot,rew=Math.abs(d.tp-d.entry),risk=Math.abs(d.entry-d.sl),px=X0+Math.round(8*hr);
-      const tpUp=yT<yE,at=(y,dy)=>Math.round((y+dy)*vr);
-      ctx.fillStyle='#bff3dc';ctx.fillText(`TP  +${rew.toFixed(2)} จุด  ($${(rew*mult).toFixed(2)})`,px,at(yT,tpUp?11:-11));
-      ctx.fillStyle='#ffc9d0';ctx.fillText(`SL  −${risk.toFixed(2)} จุด  ($${(risk*mult).toFixed(2)})`,px,at(yS,tpUp?-11:11));
-      ctx.fillStyle='#ffffff';ctx.fillText(`${d.side}${d.tag?' @ '+d.tag:''} · ${d.lot} lot · RR 1 : ${(rew/risk).toFixed(2)}`,px,at(yE,tpUp?-10:10));
+      const boxW=(X1-X0)/hr,fs=Math.round((boxW<200?11:12)*hr);ctx.font=fs+"px 'Noto Sans Thai',system-ui,sans-serif";ctx.textBaseline='middle';
+      const mult=100*d.lot,rew=Math.abs(d.tp-d.entry),risk=Math.abs(d.entry-d.sl),px=X0+Math.round(6*hr),maxW=X1-px-Math.round(4*hr);
+      const fit=a=>a.find(s=>ctx.measureText(s).width<=maxW)||a[a.length-1];
+      const tpUp=yT<yE,at=(y,dy)=>Math.round((y+dy)*vr),rr=(rew/risk).toFixed(2);
+      ctx.fillStyle='#bff3dc';ctx.fillText(fit([`TP  +${rew.toFixed(2)} จุด  ($${(rew*mult).toFixed(2)})`,`TP +${rew.toFixed(1)}  $${(rew*mult).toFixed(0)}`,`TP +${rew.toFixed(0)}`]),px,at(yT,tpUp?11:-11));
+      ctx.fillStyle='#ffc9d0';ctx.fillText(fit([`SL  −${risk.toFixed(2)} จุด  ($${(risk*mult).toFixed(2)})`,`SL −${risk.toFixed(1)}  $${(risk*mult).toFixed(0)}`,`SL −${risk.toFixed(0)}`]),px,at(yS,tpUp?-11:11));
+      ctx.fillStyle='#ffffff';ctx.fillText(fit([`${d.side}${d.tag?' @ '+d.tag:''} · ${d.lot} lot · RR 1 : ${rr}`,`${d.side} · RR 1:${rr}`,d.side]),px,at(yE,tpUp?-10:10));
     })});
   }
 }
@@ -480,7 +528,7 @@ async function load(){
     const cs=await klines(S.src,S.tf,1000);
     if(my!==S.seq)return;
     S.cs=cs;recalc(true);if(ORD.auto!==false){autoPlan();drawLines();renderOrd()}
-    const n=cs.length;chMain.timeScale().setVisibleLogicalRange({from:n-110,to:n+54});
+    const n=cs.length;chMain.timeScale().setVisibleLogicalRange({from:n-(MOB()?44:110),to:n+(MOB()?26:54)});
     connectWs();loadMtf();
   }catch(e){
     if(my!==S.seq)return;
@@ -618,7 +666,7 @@ function ordList(){
 function ordAdd(){ // price lines + shaded zones on the main chart
   const L=ordList(),two=L.length>1;
   // two orders → place the boxes side by side so they never overlap
-  posBox.set(L.length&&ORD.t0?L.map((o,i)=>({...o,t0:ORD.t0,lot:ORD.lot,bars:two?22:40,off:two?i*24:0})):null);
+  posBox.set(L.length&&ORD.t0?L.map((o,i)=>({...o,t0:ORD.t0,lot:ORD.lot,bars:two?(MOB()?11:22):(MOB()?20:40),off:two?i*(MOB()?12:24):0})):null);
   const walls=ORD.auto&&ORD.src==='walls'&&ORD.list&&ORD.list.length;
   const entryOnWall=walls&&$('#tOpt').checked; // wall line already marks the entry price
   const add=(price,color,title,style,w)=>S.lines.push(sCandle.createPriceLine({price,color,lineWidth:w,lineStyle:style,axisLabelVisible:true,title}));
