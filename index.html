@@ -297,6 +297,7 @@ i.vd.u{background:var(--up)} i.vd.d{background:var(--dn)}
   .tools{margin-top:10px}
 }
 .omode{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 8px;font-size:12.5px}.omode button{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer;font:inherit}.omode button.on{background:var(--gold,#e6b94c);color:#111;border-color:transparent;font-weight:700}
+.optD{scroll-margin-top:64px}
 </style>
 </head>
 <body>
@@ -414,7 +415,7 @@ i.vd.u{background:var(--up)} i.vd.d{background:var(--dn)}
 
           <h3 style="margin-top:12px">แผนตามกฎเลขกลม 00/50</h3>
           <div id="optPlan"></div>
-          <details open class="optD"><summary>ตารางรายสไตรก์ (Call ▮ Put) · <span id="omName">Volume</span></summary><div class="optTbl"><table class="opt" style="margin-top:8px"><thead><tr><th>Strike</th><th>Call ▮ Put (<span class="omName">Volume</span>)</th><th class="r">กฎ P/C</th></tr></thead><tbody id="optRows"></tbody></table></div></details>
+          <details open class="optD" id="optTblD"><summary>ตารางรายสไตรก์ (Call ▮ Put) · <span id="omName">Volume</span></summary><div class="optTbl"><table class="opt" style="margin-top:8px"><thead><tr><th>Strike</th><th>Call ▮ Put (<span class="omName">Volume</span>)</th><th class="r">กฎ P/C</th></tr></thead><tbody id="optRows"></tbody></table></div></details>
           <div class="note">กฎ (ตามเกณฑ์ที่เลือก): Put &gt; Call ที่ Strike = BUY (แนวรับ) · Call &gt; Put = SELL (แนวต้าน) · ดูในรัศมี ±10 จุดรอบเลขกลม · SL 25 จุด · RR 1:2</div>
           <div class="ctl mut" style="margin-top:8px;font-size:12px">ส่วนต่าง GC − ราคาบนกราฟ <input type="number" id="basis" step="0.1" value="0"> จุด · ซิงค์จากราคา GC ตอนนี้ <input type="number" id="gcpx" step="0.1" placeholder="เช่น 3865.3" style="width:95px"><button id="gcGo">ซิงค์</button></div>
           <details><summary>อัปเดตข้อมูล Options (วางข้อมูลใหม่)</summary>
@@ -943,7 +944,7 @@ function renderOpt_(){
   $('#optRows').innerHTML=OPT.rows.slice().sort((a,b)=>b[0]-a[0]).map(r=>{
     const k=r[0],c=cv(r),p=pv(r),sig=p>c?'<span class="up">BUY</span>':c>p?'<span class="dn">SELL</span>':'<span class="mut">—</span>';
     return `<tr class="${k===near?'atm':''}"><td class="n">${k}${k===near?' ◂':''}</td>
-      <td><div class="ob" style="width:${Math.max(25,(c+p)/mx*100)}%"><i class="c" style="width:${c/(c+p||1)*100}%"></i><i class="p" style="width:${p/(c+p||1)*100}%"></i></div><span class="mut n" style="font-size:11px">C ${c} · P ${p}</span></td>
+      <td><div class="ob" style="width:${Math.max(25,(c+p)/mx*100)}%"><i class="c" style="width:${c/(c+p||1)*100}%"></i><i class="p" style="width:${p/(c+p||1)*100}%"></i></div><span class="mut n" style="font-size:11px">Vol C ${r[1]} · P ${r[2]}${(r[3]||r[4])?` &nbsp;|&nbsp; OI C ${r[3]||0} · P ${r[4]||0}`:''}</span></td>
       <td class="r">${sig}</td></tr>`}).join('');
   // plan around round levels
   if(pxGC!=null){
@@ -1722,6 +1723,17 @@ buildTfs();load();
   const show=id=>{bs.forEach(b=>b.classList.toggle('on',b.dataset.tab===id));document.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('on',p.id===id))};
   bs.forEach(b=>b.addEventListener('click',()=>{show(b.dataset.tab);try{localStorage.setItem('goldTab',b.dataset.tab)}catch(e){}}));
   try{const t=localStorage.getItem('goldTab');if(t&&document.getElementById(t))show(t)}catch(e){}
+  // มือถือ: เปิดมาแล้วเด้งไปที่ตารางรายสไตรก์ (ครั้งเดียว ไม่ดึงกลับถ้าผู้ใช้เลื่อนเอง)
+  if(window.innerWidth<=700){
+    show('t1');
+    let moved=false;const mv=()=>{moved=true};
+    addEventListener('touchstart',mv,{once:true,passive:true});addEventListener('wheel',mv,{once:true,passive:true});
+    let tries=0;const go=()=>{
+      if(moved)return;const d=document.getElementById('optTblD');
+      if(d&&typeof S!=='undefined'&&S.A&&document.querySelector('#optRows tr')){d.open=true;d.scrollIntoView({block:'start'});setTimeout(()=>{if(!moved)d.scrollIntoView({block:'start'})},700);return}
+      if(++tries<40)setTimeout(go,250)};
+    go();
+  }
 })();
 </script>
 </body>
