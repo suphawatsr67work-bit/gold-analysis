@@ -264,6 +264,15 @@ i.id.h{background:var(--dn)} i.id.m{background:var(--warn)} i.id.l{background:#7
 .indD[open]>summary{border-color:var(--gold);color:var(--gold)}
 .indD>.tgGroups{margin-top:8px}
 @media(max-width:700px){.indD>summary{min-height:36px;padding-top:8px}}
+.vf{display:flex;gap:8px;align-items:center;font-size:12.5px;padding:2px 0}
+.vf .vn{min-width:150px}
+i.vd{flex:0 0 9px;height:9px;border-radius:50%;background:#667}
+i.vd.u{background:var(--up)} i.vd.d{background:var(--dn)}
+.scn{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:8px;font-size:12.5px;background:var(--panel2)}
+.scn.main{border-color:var(--gold);background:rgba(232,184,74,.07)}
+.wn{color:var(--warn);font-size:12px;padding:1px 0}
+.wlD{margin-top:10px}.wlD summary{color:var(--txt);font-size:12.5px}
+@media(max-width:700px){.vf{flex-wrap:wrap;gap:2px 8px}.vf .vn{min-width:0}.vf .mut{flex:1 0 100%;padding-left:17px}}
 </style>
 </head>
 <body>
@@ -276,7 +285,7 @@ i.id.h{background:var(--dn)} i.id.m{background:var(--warn)} i.id.l{background:#7
       <div class="sp"></div>
       <div class="status"><span class="dot" id="dot"></span><span id="stxt">กำลังเชื่อมต่อ…</span></div>
     </div>
-    <nav class="jump"><a href="#chartCard">กราฟ</a><a href="#vCard">สรุป</a><a href="#optCard">Options</a><a href="#ordCard">ออเดอร์</a><a href="#newsCard">ข่าว</a><a href="#mtfCard">หลาย TF</a></nav>
+    <nav class="jump"><a href="#chartCard">กราฟ</a><a href="#vCard">สรุป</a><a href="#viewCard">ความเห็น</a><a href="#optCard">Options</a><a href="#ordCard">ออเดอร์</a><a href="#newsCard">ข่าว</a><a href="#mtfCard">หลาย TF</a></nav>
   </div>
 
   <header class="hdr">
@@ -349,6 +358,16 @@ i.id.h{background:var(--dn)} i.id.m{background:var(--warn)} i.id.l{background:#7
         <div class="gauge"><i id="gMark" style="left:50%"></i></div>
         <div class="gl"><span>ขาลง</span><span>กลาง</span><span>ขาขึ้น</span></div>
         <ul class="rs" id="reasons"></ul>
+      </div>
+
+      <div class="card" id="viewCard" data-col>
+        <h3>ความเห็นตามกฎ <span class="mut" style="font-weight:400">· สถานการณ์ &amp; กำแพง</span></h3>
+        <div id="viewBody"></div>
+        <details class="wlD"><summary>📈 สถิติกำแพงย้อนหลัง (บันทึกในเบราว์เซอร์นี้) <span class="mut" id="wlCnt"></span></summary>
+          <div id="wlBody" style="margin-top:6px"></div>
+          <div class="ctl" style="margin-top:6px"><button id="wlAdd">＋ บันทึกกำแพงปัจจุบัน</button><button id="wlClear">ล้างสถิติ</button><span class="mut" id="wlMsg" style="font-size:12px"></span></div>
+        </details>
+        <div class="note">สรุปจากกฎและตัวเลขบนหน้านี้เท่านั้น ไม่ได้ทำนายราคาและไม่ใช่ความน่าจะเป็น หรือคำแนะนำการลงทุน ตลาดอาจเคลื่อนไหวต่างจากสถานการณ์ได้เสมอ</div>
       </div>
 
       <div class="card" id="optCard" data-col>
@@ -760,7 +779,7 @@ function render(){
   }
   const c=S.cs[S.cs.length-1];
   $('#px').textContent=f2(c.close);
-  renderOpt();renderOrd();renderSmc();
+  renderOpt();renderOrd();renderSmc();renderView();renderWl();
 }
 
 function setStatus(kind,txt){$('#dot').className='dot '+(kind||'');$('#stxt').textContent=txt}
@@ -778,7 +797,7 @@ async function load(){
   try{
     const cs=await klines(S.src,S.tf,1000);
     if(my!==S.seq)return;
-    S.cs=cs;recalc(true);if(ORD.auto!==false){autoPlan();drawLines();renderOrd()}
+    S.cs=cs;recalc(true);if(OPT.asof!==OPT_DEFAULT.asof){wlAdd();renderWl()}if(ORD.auto!==false){autoPlan();drawLines();renderOrd()}
     const n=cs.length;chMain.timeScale().setVisibleLogicalRange({from:n-(MOB()?44:110),to:n+(MOB()?26:54)});
     connectWs();loadMtf();
   }catch(e){
@@ -829,9 +848,10 @@ async function loadMtf(){
         $('#chg').textContent=`${ch>=0?'+':''}${f2(ch)} (${ch>=0?'+':''}${pc.toFixed(2)}%) วันนี้`;$('#chg').className='c '+(ch>=0?'up':'dn');}
     });
     $('#mtf').innerHTML=html;
-    const avg=tot/res.length;
+    const avg=tot/res.length;S.mtfAvg=avg;
     $('#mtfSum').innerHTML=avg>=2?'ทุก TF ส่วนใหญ่เอนเอียง<b class="up"> ขาขึ้น</b> — ทิศทางสอดคล้องกัน':avg<=-2?'ทุก TF ส่วนใหญ่เอนเอียง<b class="dn"> ขาลง</b> — ทิศทางสอดคล้องกัน':'แต่ละ TF ยังให้สัญญาณไม่สอดคล้องกัน — ควรระวัง หรือรอให้ TF ใหญ่ชัดเจน';
   }catch(e){}
+  if(typeof renderView==='function'&&S.A)renderView();
 }
 setInterval(()=>{if(S.cs.length)loadMtf()},60000);
 
@@ -861,6 +881,9 @@ function optLevelPlan(L,spotGC){
   return{L,c,p,sig:buy?'BUY':'SELL',full,sl:buy?L-25:L+25,tp:buy?L+50:L-50};
 }
 function renderOpt(){
+  try{renderOpt_();}finally{if(typeof renderView==='function'&&S.A)renderView()}
+}
+function renderOpt_(){
   if(!OPT.rows.length)return;
   const st=optStats(),px=S.A?S.A.px:null,pxGC=px==null?null:px+BASIS;
   $('#optMeta').innerHTML=`ข้อมูล ณ ${OPT.asof} · สัญญาหมดอายุ ${OPT.exp} · GC Dec ≈ ${f2(OPT.fut)}<br><span class="warn">เป็น Snapshot ไม่อัปเดตอัตโนมัติ — ตลาดเปลี่ยนเร็ว ให้กด "อัปเดตข้อมูล" ด้านล่างก่อนใช้งาน</span>`;
@@ -1035,7 +1058,7 @@ $('#optApply').onclick=()=>{
     const d=new Date(Date.now()+7*3600e3),pad=n=>String(n).padStart(2,'0');
     OPT={asof:`${pad(d.getUTCDate())}/${pad(d.getUTCMonth()+1)}/${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} (เวลาไทย)`,exp:'ตามที่วางล่าสุด',fut:OPT.fut,rows};
     try{localStorage.setItem('goldOpt',JSON.stringify(OPT))}catch(e){}
-    $('#optMsg').textContent=`ใช้ข้อมูล ${rows.length} Strike แล้ว`;refreshAutoOrd();drawLines();renderOpt();renderOrd();
+    $('#optMsg').textContent=`ใช้ข้อมูล ${rows.length} Strike แล้ว`;if(S.A)wlAdd();refreshAutoOrd();drawLines();renderOpt();renderOrd();
   }catch(e){$('#optMsg').textContent='ผิดพลาด: '+e.message}};
 $('#optReset').onclick=()=>{OPT=JSON.parse(JSON.stringify(OPT_DEFAULT));try{localStorage.removeItem('goldOpt')}catch(e){}$('#optMsg').textContent='กลับเป็นค่าเริ่มต้นแล้ว';refreshAutoOrd();drawLines();renderOpt();renderOrd()};
 $('#resetAll').onclick=()=>{
@@ -1331,6 +1354,117 @@ NEWTG.forEach(id=>$(id).addEventListener('change',()=>{saveTg();if(id.startsWith
 function indCount(){const n=NEWTG.slice(3).filter(id=>$(id).checked).length;$('#indCnt').textContent=n?'· SMC/ICT เปิดอยู่ '+n+' รายการ':''}
 NEWTG.forEach(id=>$(id).addEventListener('change',indCount));
 loadTg();buildCfg();applyLabels();updatePanes();indCount();if(MOB())$('#indD').open=false;
+/* ============ ความเห็นตามกฎ (สถานการณ์) + สถิติกำแพง ============ */
+function parseAsof(asof){const m=/(\d+)\/(\d+)\/(\d+)\s+(\d+):(\d+)/.exec(asof||'');return m?Date.parse(`${m[3]}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}T${String(m[4]).padStart(2,'0')}:${m[5]}:00+07:00`):null}
+function wallPrices(){
+  if(!OPT.rows.length)return null;const st=optStats();
+  return{cw:st.cw[0]-BASIS,pw:st.pw[0]-BASIS,cwS:st.cw[0],pwS:st.pw[0],pc:st.pc}}
+function buildView(){
+  const A=S.A;if(!A||!A.smc||!A.ict)return null;
+  const px=A.px,a=A.atrv||1,m=A.smc,ic=A.ict,W=wallPrices(),F=[];
+  const add=(n,d,t)=>F.push({n,d,t});
+  add('แนวโน้มอินดิเคเตอร์',A.score>=2?1:A.score<=-2?-1:0,`${A.label[0]} (${A.score>0?'+':''}${A.score})`);
+  if(S.mtfAvg!=null)add('หลาย Timeframe',S.mtfAvg>=2?1:S.mtfAvg<=-2?-1:0,`คะแนนเฉลี่ย ${S.mtfAvg>0?'+':''}${S.mtfAvg.toFixed(1)}`);
+  if(m.ev.length)add('โครงสร้าง SMC',m.trend,m.trend===1?'Bullish':'Bearish');
+  let pos=null;
+  if(m.range){pos=(px-m.range.bot)/(m.range.top-m.range.bot)*100;add('Premium / Discount',pos<=40?1:pos>=60?-1:0,pos>100?'เหนือกรอบ':pos<0?'ใต้กรอบ':(pos>50?'Premium ':'Discount ')+pos.toFixed(0)+'%')}
+  if(W){
+    const dc=W.cw-px,dp=px-W.pw;
+    let d=0,t='';
+    if(px>W.cw){t='เหนือ Call Wall (ทะลุขึ้น)'}else if(px<W.pw){t='ใต้ Put Wall (ทะลุลง)'}
+    else if(dp<dc*0.7){d=1;t='ใกล้ Put Wall (แนวรับ)'}else if(dc<dp*0.7){d=-1;t='ใกล้ Call Wall (แนวต้าน)'}else t='อยู่ระหว่างกำแพง';
+    add('ตำแหน่งเทียบกำแพง Options',d,t);
+    if(W.pc!=null)add('Put/Call Volume รวม',W.pc>=1.15?1:W.pc<=0.87?-1:0,`P/C = ${W.pc.toFixed(2)}`);
+  }
+  const net=F.reduce((s,x)=>s+x.d,0),nUp=F.filter(x=>x.d>0).length,nDn=F.filter(x=>x.d<0).length;
+  const bias=net>=3?'up':net<=-3?'dn':'nt';
+  // ระดับราคาสำคัญ
+  const lv=[],addL=(p,n)=>{if(p!=null&&isFinite(p))lv.push({p,n})};
+  if(W){addL(W.cw,'Call Wall '+W.cwS);addL(W.pw,'Put Wall '+W.pwS)}
+  A.res.forEach((p,k)=>addL(p,'แนวต้าน R'+(k+1)));A.sup.forEach((p,k)=>addL(p,'แนวรับ S'+(k+1)));
+  addL(A.roundUp[0],'เลขกลม '+A.roundUp[0]);addL(A.roundDn[0],'เลขกลม '+A.roundDn[0]);
+  m.obs.filter(o=>o.m==null).forEach(o=>addL((o.hi+o.lo)/2,o.dir===1?'OB ▲':'OB ▼'));
+  m.eqh.forEach(q=>addL(q.p,'EQH'));m.eql.forEach(q=>addL(q.p,'EQL'));
+  if(ic.pdh){addL(ic.pdh.p,'PDH');addL(ic.pdl.p,'PDL')}
+  const uniq=arr=>{const o=[];arr.forEach(x=>{if(!o.some(y=>Math.abs(y.p-x.p)<0.2*a))o.push(x)});return o};
+  const above=uniq(lv.filter(x=>x.p>px+0.15*a).sort((x,y)=>x.p-y.p)),below=uniq(lv.filter(x=>x.p<px-0.15*a).sort((x,y)=>y.p-x.p));
+  // คำเตือน
+  const warn=[];
+  const nw=window.__news&&window.__news.nextHigh();
+  if(nw){const mins=Math.round((nw.t-Date.now())/60000);if(mins<=90)warn.push(`ข่าวแรง USD "${nw.title}" อีก ${mins<60?mins+' นาที':Math.floor(mins/60)+' ชม. '+(mins%60)+' น.'} — ราคากระชากได้ ระวังตั้ง SL`)}
+  const ageH=OPT.rows.length?(Date.now()-(parseAsof(OPT.asof)||Date.now()))/3600e3:null;
+  if(ageH!=null&&ageH>8)warn.push(`ข้อมูล Options เก่า ${ageH>=24?Math.floor(ageH/24)+' วัน':Math.round(ageH)+' ชม.'} — กำแพงอาจไม่ตรงแล้ว ควรอัปเดต`);
+  const r=A.rsi[A.rsi.length-1],k=A.st.k[A.st.k.length-1];
+  if(bias==='up'&&((r!=null&&r>=CFG.rsiOB)||(k!=null&&k>=CFG.stOB)))warn.push('ฝั่งขึ้นแต่โมเมนตัมเข้าเขต Overbought — ระวังย่อก่อน/ไล่ราคา');
+  if(bias==='dn'&&((r!=null&&r<=CFG.rsiOS)||(k!=null&&k<=CFG.stOS)))warn.push('ฝั่งลงแต่โมเมนตัมเข้าเขต Oversold — ระวังเด้งกลับ');
+  if(W){const nr=Math.min(Math.abs(W.cw-px),Math.abs(px-W.pw));if(nr<0.5*a)warn.push(`ราคาห่างกำแพงที่ใกล้สุดไม่ถึง 0.5 ATR — มีโอกาสชนแนวแล้วเด้ง/ทะลุ ดูแท่งยืนยันก่อน`)}
+  const kz=kzNow();
+  if(!kz.cur)warn.push('ตอนนี้อยู่นอก Kill Zone (วอลุ่มอาจบาง สัญญาณเชื่อถือได้น้อยลง)');
+  return{F,net,nUp,nDn,bias,above,below,warn,px,a,pos,W};
+}
+function renderView(){
+  const el=$('#viewBody');if(!el)return;
+  const V=buildView();if(!V){el.innerHTML='<div class="mut">กำลังโหลดข้อมูล…</div>';return}
+  const {F,net,nUp,nDn,bias,above,below,warn,px,a}=V;
+  const dot=d=>`<i class="vd ${d>0?'u':d<0?'d':'n'}"></i>`;
+  const lab={up:['เอนเอียงขึ้น','b-up'],dn:['เอนเอียงลง','b-dn'],nt:['ยังไม่ชัด / รอสัญญาณ','b-nt']}[bias];
+  let h=`<div class="verdict"><span class="badge ${lab[1]}">${lab[0]}</span><span class="mut" style="font-size:12px">ปัจจัยหนุนขึ้น ${nUp} · หนุนลง ${nDn} · กลาง ${F.length-nUp-nDn} (จาก ${F.length}) — <i>ไม่ใช่ความน่าจะเป็น</i></span></div>`;
+  h+='<div style="margin-top:6px">'+F.map(x=>`<div class="vf">${dot(x.d)}<span class="vn">${x.n}</span><span class="mut">${x.t}</span></div>`).join('')+'</div>';
+  const pt=(p)=>{const d=p-px;return `${f2(p)} <span class="${d>0?'up':'dn'}">(${d>0?'+':''}${d.toFixed(1)} จุด · ${(Math.abs(d)/a).toFixed(1)} ATR)</span>`};
+  const upS=above.length?`ปิดเหนือ <b>${above[0].n}</b> ${pt(above[0].p)}${above[1]?` → เป้า <b>${above[1].n}</b> ${pt(above[1].p)}`:''}${above[2]?` → ต่อที่ ${above[2].n} ${f2(above[2].p)}`:''}`:'ไม่พบแนวต้านใกล้ๆ ให้อ้างอิง';
+  const dnS=below.length?`ปิดใต้ <b>${below[0].n}</b> ${pt(below[0].p)}${below[1]?` → เป้า <b>${below[1].n}</b> ${pt(below[1].p)}`:''}${below[2]?` → ต่อที่ ${below[2].n} ${f2(below[2].p)}`:''}`:'ไม่พบแนวรับใกล้ๆ ให้อ้างอิง';
+  const upB=`<div class="scn ${bias==='up'?'main':''}"><b class="up">▲ สถานการณ์ขึ้น${bias==='up'?' (หลัก)':''}</b><br>${upS}${below[0]?`<br><span class="mut">สมมติฐานเสียเมื่อปิดใต้ ${f2(below[0].p-0.25*a)}</span>`:''}</div>`;
+  const dnB=`<div class="scn ${bias==='dn'?'main':''}"><b class="dn">▼ สถานการณ์ลง${bias==='dn'?' (หลัก)':''}</b><br>${dnS}${above[0]?`<br><span class="mut">สมมติฐานเสียเมื่อปิดเหนือ ${f2(above[0].p+0.25*a)}</span>`:''}</div>`;
+  h+=bias==='dn'?dnB+upB:upB+dnB;
+  if(bias==='nt')h+='<div class="note" style="margin-top:6px">ปัจจัยขัดแย้งกัน — ช่วงแกว่งอยู่ระหว่างแนวรับและแนวต้านข้างบน รอราคาเบรกพร้อมแท่งยืนยัน</div>';
+  if(warn.length)h+='<div style="margin-top:8px">'+warn.map(w=>`<div class="wn">⚠ ${w}</div>`).join('')+'</div>';
+  el.innerHTML=h;
+}
+/* ---- สถิติกำแพง: บันทึกแล้วตรวจผลกับแท่งเทียนย้อนหลัง ---- */
+const WL_KEY='goldWallLog';
+function wlRead(){try{return JSON.parse(localStorage.getItem(WL_KEY)||'[]')}catch(e){return[]}}
+function wlWrite(a){try{localStorage.setItem(WL_KEY,JSON.stringify(a.slice(-200)))}catch(e){}}
+function wlAdd(){
+  if(!OPT.rows.length||!S.A)return false;
+  const st=optStats(),t=parseAsof(OPT.asof)||Date.now(),L=wlRead();
+  if(L.some(e=>Math.abs(e.t-t)<30*60000&&e.cw===st.cw[0]&&e.pw===st.pw[0]))return false;
+  L.push({t,cw:st.cw[0],pw:st.pw[0],basis:BASIS,px:S.A.px});L.sort((x,y)=>x.t-y.t);wlWrite(L);return true}
+function wlEval(e){
+  const cs=S.cs,tf=TFSEC[S.tf],t0=toT(e.t),t1=t0+24*3600;
+  if(!cs.length||cs[0].time>t0)return{st:'nodata'};
+  const cwp=e.cw-e.basis,pwp=e.pw-e.basis,a=(S.A&&S.A.atrv)||1;
+  let first=null,bothBar=false,hitC=null,hitP=null;
+  for(let i=0;i<cs.length;i++){const c=cs[i];if(c.time+tf<=t0)continue;if(c.time>=t1)break;
+    const hc=c.high>=cwp,hp=c.low<=pwp;
+    if(hc&&hitC==null)hitC=i;if(hp&&hitP==null)hitP=i;
+    if(!first&&(hc||hp)){first=hc&&hp?'both':hc?'call':'put'}}
+  const done=cs[cs.length-1].time+tf>=t1;
+  let broke=null;
+  if(first==='call'||first==='put'){const i0=first==='call'?hitC:hitP;broke=false;
+    for(let i=i0;i<cs.length&&cs[i].time<t1;i++){if(first==='call'?cs[i].close>cwp+0.25*a:cs[i].close<pwp-0.25*a){broke=true;break}}}
+  return{st:done?'done':'pending',first,broke}}
+function renderWl(){
+  const el=$('#wlBody');if(!el)return;
+  const L=wlRead();$('#wlCnt').textContent=L.length?'· '+L.length+' รายการ':'';
+  if(!L.length){el.innerHTML='<div class="mut" style="font-size:12px">ยังไม่มีข้อมูล — ระบบจะบันทึกอัตโนมัติทุกครั้งที่คุณกด "ใช้ข้อมูล" ในการ์ด Options (หรือกด "บันทึกกำแพงปัจจุบัน")</div>';return}
+  const R=L.map(e=>({e,r:wlEval(e)}));
+  const done=R.filter(x=>x.r.st==='done');
+  const nC=done.filter(x=>x.r.first==='call').length,nP=done.filter(x=>x.r.first==='put').length,nB=done.filter(x=>x.r.first==='both').length,nN=done.filter(x=>!x.r.first).length;
+  const touched=done.filter(x=>x.r.first==='call'||x.r.first==='put'),brk=touched.filter(x=>x.r.broke).length;
+  let h='';
+  if(done.length)h+=`<div class="sr"><span class="mut">ครบ 24 ชม. แล้ว</span><span>${done.length} ครั้ง</span></div>
+   <div class="sr"><span class="mut">แตะ Call Wall ก่อน / Put Wall ก่อน</span><span>${nC} / ${nP}</span></div>
+   <div class="sr"><span class="mut">ไม่แตะทั้งคู่ / แตะพร้อมกันในแท่งเดียว</span><span>${nN} / ${nB}</span></div>
+   <div class="sr"><span class="mut">แตะแล้วทะลุ (ปิดเลย 0.25 ATR) / ไม่ทะลุ</span><span>${brk} / ${touched.length-brk}</span></div>`;
+  h+='<div style="margin-top:6px;max-height:190px;overflow:auto">'+R.slice(-12).reverse().map(({e,r})=>{
+    const d=new Date(e.t+7*3600e3),pad=n=>String(n).padStart(2,'0'),ds=`${pad(d.getUTCDate())}/${pad(d.getUTCMonth()+1)} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+    const out=r.st==='nodata'?'<span class="mut">ไม่มีแท่งครอบคลุม</span>':r.st==='pending'&&!r.first?'<span class="mut">รอผล…</span>':
+      `${r.first==='call'?'แตะ Call ก่อน':r.first==='put'?'แตะ Put ก่อน':r.first==='both'?'แตะทั้งคู่':'ไม่แตะ'}${r.broke===true?' · <b class="warn">ทะลุ</b>':r.broke===false?' · เด้ง/ยืน':''}${r.st==='pending'?' <span class="mut">(ยังไม่ครบ 24 ชม.)</span>':''}`;
+    return `<div class="sr"><span class="mut">${ds} · C ${e.cw} / P ${e.pw}</span><span>${out}</span></div>`}).join('')+'</div>';
+  h+=`<div class="note">${done.length<20?'ตัวอย่างยังน้อย ('+done.length+' ครั้ง) — อย่าเพิ่งเชื่อเป็นสถิติ ควรสะสมอย่างน้อย 20–30 ครั้งขึ้นไป · ':''}ตรวจผลด้วยแท่ง ${S.tf} ของ Timeframe ที่เลือก (แนะนำ 1h หรือต่ำกว่า) และจำกัดเฉพาะวันที่แท่งเทียนย้อนหลังครอบคลุม</div>`;
+  el.innerHTML=h}
+$('#wlAdd').onclick=()=>{$('#wlMsg').textContent=wlAdd()?'บันทึกแล้ว':'มีรายการนี้อยู่แล้ว';renderWl();setTimeout(()=>$('#wlMsg').textContent='',2500)};
+$('#wlClear').onclick=()=>{if(confirm('ล้างสถิติกำแพงที่บันทึกไว้ทั้งหมด?')){wlWrite([]);renderWl()}};
 
 bindOrd();
 buildTfs();load();
@@ -1501,6 +1635,7 @@ buildTfs();load();
     render();topLine();
   }
   bind();render();load();
+  window.__news={nextHigh:()=>EV.find(e=>e.country==='USD'&&e.impact==='High'&&e.t>Date.now())};
   setInterval(()=>{render();topLine();},30000);
   setInterval(load,15*60000);
 })();
