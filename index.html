@@ -189,10 +189,10 @@ i.id.h{background:var(--dn)} i.id.m{background:var(--warn)} i.id.l{background:#7
 .hsBody select{max-width:100%}
 .chartBar>*{min-width:0;max-width:100%}
 .chartBar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin-bottom:8px}
-.chartBar .toggles{margin:0;gap:6px 8px}
-.chartBar .toggles label{border:1px solid var(--line);border-radius:99px;padding:3px 10px;background:var(--panel2);transition:border-color .15s}
-.chartBar .toggles label:hover{border-color:#394456}
-.chartBar .toggles input:checked + *{}
+.chartBar .toggles,.tgGroups .toggles{margin:0;gap:6px 8px}
+.chartBar .toggles label,.tgGroups .toggles label{border:1px solid var(--line);border-radius:99px;padding:3px 10px;background:var(--panel2);transition:border-color .15s}
+.chartBar .toggles label:hover,.tgGroups .toggles label:hover{border-color:#394456}
+.chartBar .toggles input:checked + *,.tgGroups .toggles input:checked + *{}
 #tfs button{min-width:44px}
 .card h3.ch{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;user-select:none}
 .card h3.ch::after{content:'▾';color:var(--mut);font-size:12px;flex:0 0 auto}
@@ -226,11 +226,44 @@ i.id.h{background:var(--dn)} i.id.m{background:var(--warn)} i.id.l{background:#7
   .hsBody select,.hsBody button{width:100%}
   .chartBar{flex-direction:column;align-items:stretch;gap:8px}
   .chartBar #tfs{width:100%}
-  .chartBar .toggles{flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;padding-bottom:2px;scrollbar-width:none}
-  .chartBar .toggles::-webkit-scrollbar{display:none}
-  .chartBar .toggles label{flex:0 0 auto;min-height:30px}
+  .chartBar .toggles,.tgGroups .toggles{flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;padding-bottom:2px;scrollbar-width:none}
+  .chartBar .toggles::-webkit-scrollbar,.tgGroups .toggles::-webkit-scrollbar{display:none}
+  .chartBar .toggles label,.tgGroups .toggles label{flex:0 0 auto;min-height:30px}
   .card,.grid>.card{scroll-margin-top:92px}
 }
+
+#cStoch{height:110px;margin-top:4px}
+.tgGroups{display:flex;flex-direction:column;gap:6px;margin:-2px 0 8px}
+.tgGroups .toggles{margin:0;gap:6px 8px;align-items:center}
+.tgl{font-size:11px;font-weight:700;color:var(--gold);min-width:52px;letter-spacing:.3px}
+.cfgD{margin:0 0 8px;border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:rgba(255,255,255,.015)}
+.cfgD summary{color:var(--txt);font-size:12.5px}
+.cfgGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px 14px;margin-top:8px}
+.cfgG{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--panel2)}
+.cfgG b{display:block;font-size:11.5px;color:var(--gold);margin-bottom:4px}
+.cfgG .cf{display:flex;gap:6px;flex-wrap:wrap}
+.cfgG label{display:flex;flex-direction:column;font-size:10.5px;color:var(--mut);gap:2px;flex:1 1 54px;min-width:54px}
+.cfgG input{width:100%;font-size:13px}
+.sr{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:3px 0;border-bottom:1px solid var(--line)}
+.sr>span:last-child{text-align:right}
+.sg{font-size:11px;color:var(--gold);margin:8px 0 2px;font-weight:700;letter-spacing:.3px}
+.sg:first-child{margin-top:0}
+@media(max-width:700px){
+  #cStoch{height:96px}
+  .tgl{min-width:0}
+  .tgGroups .toggles{flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+  .tgGroups .toggles::-webkit-scrollbar{display:none}
+  .tgGroups .toggles label{flex:0 0 auto}
+  .tgGroups .tgl{flex:0 0 auto}
+  .cfgGrid{grid-template-columns:1fr 1fr}
+  .cfgG input{font-size:16px;min-height:34px}
+}
+.indD{margin:0 0 8px}
+.indD>summary{cursor:pointer;font-size:12.5px;color:var(--txt);padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);list-style:none}
+.indD>summary::-webkit-details-marker{display:none}
+.indD[open]>summary{border-color:var(--gold);color:var(--gold)}
+.indD>.tgGroups{margin-top:8px}
+@media(max-width:700px){.indD>summary{min-height:36px;padding-top:8px}}
 </style>
 </head>
 <body>
@@ -268,17 +301,44 @@ i.id.h{background:var(--dn)} i.id.m{background:var(--warn)} i.id.l{background:#7
       <div class="chartBar">
       <div class="ctl" id="tfs"></div>
       <div class="toggles">
-        <label><input type="checkbox" id="tEma"> EMA 20/50/200</label>
-        <label><input type="checkbox" id="tBb"> Bollinger Bands</label>
+        <label><input type="checkbox" id="tEma"> <span id="lblEma">EMA 20/50/200</span></label>
+        <label><input type="checkbox" id="tBb"> <span id="lblBb">Bollinger Bands</span></label>
         <label><input type="checkbox" id="tVol"> Volume</label>
         <label><input type="checkbox" id="tSr"> แนวรับ/แนวต้าน (Swing)</label>
         <label><input type="checkbox" id="tRound"> แนวเลขกลม 00/50</label>
         <label><input type="checkbox" id="tOpt" checked> กำแพง Options (GC)</label>
       </div>
       </div>
+      <details class="indD" id="indD" open><summary>📊 SMC · ICT · แผงล่าง · ตั้งค่าอินดิเคเตอร์ <span class="mut" id="indCnt"></span></summary>
+      <div class="tgGroups">
+        <div class="toggles"><span class="tgl">แผงล่าง</span>
+          <label><input type="checkbox" id="tPrsi" checked> RSI</label>
+          <label><input type="checkbox" id="tPmacd" checked> MACD</label>
+          <label><input type="checkbox" id="tPstoch" checked> Stochastic</label>
+        </div>
+        <div class="toggles"><span class="tgl">SMC</span>
+          <label title="Break of Structure / Change of Character"><input type="checkbox" id="tSmcStruct"> โครงสร้าง BOS/CHoCH</label>
+          <label title="Order Block ที่ยังไม่ถูกทำลาย"><input type="checkbox" id="tSmcOb"> Order Block</label>
+          <label title="Fair Value Gap / Imbalance ที่ยังไม่ถูกเติม"><input type="checkbox" id="tSmcFvg"> FVG</label>
+          <label title="Equal Highs / Equal Lows (กองสภาพคล่อง)"><input type="checkbox" id="tSmcEq"> EQH/EQL</label>
+          <label title="โซน Premium / Discount และเส้น Equilibrium 50%"><input type="checkbox" id="tSmcPd"> Premium/Discount</label>
+        </div>
+        <div class="toggles"><span class="tgl">ICT</span>
+          <label title="Kill Zones (เวลานิวยอร์ก): Asia 20-24, London 02-05, NY AM 07-10, London Close 10-12"><input type="checkbox" id="tIctKz"> Kill Zones</label>
+          <label title="Silver Bullet: 03-04, 10-11, 14-15 เวลานิวยอร์ก"><input type="checkbox" id="tIctSb"> Silver Bullet</label>
+          <label title="Midnight Open, High/Low เมื่อวาน (PDH/PDL) และสัปดาห์ก่อน (PWH/PWL)"><input type="checkbox" id="tIctLv"> Open / PDH-PDL / PWH-PWL</label>
+          <label title="Optimal Trade Entry 62%–79% ของขาล่าสุด"><input type="checkbox" id="tIctOte"> OTE 62–79%</label>
+        </div>
+      </div>
+      <details class="cfgD" id="cfgD"><summary>⚙ ตั้งค่าอินดิเคเตอร์ (ปรับค่าเอง)</summary>
+        <div class="cfgGrid" id="cfgGrid"></div>
+        <div class="ctl" style="margin-top:8px"><button id="cfgReset">↺ ค่าเริ่มต้นอินดิเคเตอร์</button><span class="mut" id="cfgMsg" style="font-size:12px"></span></div>
+      </details>
+      </details>
       <div class="pane"><div id="cMain"></div><div class="legend" id="lgMain"></div></div>
-      <div class="pane"><span class="tag">RSI (14)</span><div id="cRsi"></div></div>
-      <div class="pane"><span class="tag">MACD (12,26,9)</span><div id="cMacd"></div></div>
+      <div class="pane" id="pRsi"><span class="tag" id="tagRsi">RSI (14)</span><div id="cRsi"></div></div>
+      <div class="pane" id="pMacd"><span class="tag" id="tagMacd">MACD (12,26,9)</span><div id="cMacd"></div></div>
+      <div class="pane" id="pStoch"><span class="tag" id="tagStoch">Stochastic (14,3,3)</span><div id="cStoch"></div></div>
       <div class="note">เวลาแสดงเป็นเวลาไทย (UTC+7) · ราคาที่แสดง = ราคา Binance + ค่าปรับด้านบน (ปรับ/ซิงค์ได้ที่แถบด้านบน) · ข้อมูลจาก Binance (PAXG = โทเคนทองคำ 1:1 ราคาอาจต่างจาก XAUUSD ตลาดสปอตเล็กน้อย)</div>
     </div>
 
@@ -307,6 +367,12 @@ i.id.h{background:var(--dn)} i.id.m{background:var(--warn)} i.id.l{background:#7
           <textarea id="optIn" placeholder='วาง JSON หรือบรรทัดละ "strike callVol putVol" เช่น&#10;3860 101 159&#10;3865 64 40'></textarea>
           <div class="ctl" style="margin-top:6px"><button id="optApply">ใช้ข้อมูล</button><button id="optReset">กลับค่าเริ่มต้น</button><span id="optMsg" class="mut"></span></div>
         </details>
+      </div>
+
+      <div class="card" id="smcCard" data-col>
+        <h3>Smart Money / ICT สรุป <span class="mut" id="smcTf"></span></h3>
+        <div id="smcBody"></div>
+        <div class="note">คำนวณตามกฎจากแท่งเทียนบน Timeframe ที่เลือก เพื่อประกอบการศึกษา ไม่ใช่คำแนะนำการลงทุน · เปิดเลือกแสดงบนกราฟได้จากแถว SMC / ICT เหนือกราฟ</div>
       </div>
 
       <div class="card" id="ordCard" data-col>
@@ -380,6 +446,28 @@ i.id.h{background:var(--dn)} i.id.m{background:var(--warn)} i.id.l{background:#7
 </script>
 <script>
 /* ============ Indicators (pure functions) ============ */
+/* ============ Indicator settings (ปรับเองได้) ============ */
+const CFG_DEF={ema1:20,ema2:50,ema3:200,bbP:20,bbM:2,rsiP:14,rsiOB:70,rsiOS:30,macdF:12,macdS:26,macdG:9,stK:14,stD:3,stS:3,stOB:80,stOS:20,atrP:14,swing:5,obMax:3,fvgMax:4,fvgMin:0.15};
+const CFG_FIELDS=[
+  ['EMA 3 เส้น',[['ema1','เส้นสั้น',2,500,1],['ema2','เส้นกลาง',2,500,1],['ema3','เส้นยาว',2,1000,1]]],
+  ['Bollinger Bands',[['bbP','ช่วง',2,200,1],['bbM','ส่วนเบี่ยงเบน σ',0.5,5,0.1]]],
+  ['RSI',[['rsiP','ช่วง',2,100,1],['rsiOB','Overbought',50,95,1],['rsiOS','Oversold',5,50,1]]],
+  ['MACD',[['macdF','Fast',2,100,1],['macdS','Slow',3,200,1],['macdG','Signal',2,100,1]]],
+  ['Stochastic',[['stK','%K ช่วง',2,100,1],['stD','%D',1,50,1],['stS','Smooth',1,50,1],['stOB','OB',50,99,1],['stOS','OS',1,50,1]]],
+  ['ATR',[['atrP','ช่วง',2,100,1]]],
+  ['SMC / ICT',[['swing','Swing (แท่ง)',2,30,1],['obMax','OB สูงสุด/ฝั่ง',1,8,1],['fvgMax','FVG สูงสุด/ฝั่ง',1,10,1],['fvgMin','FVG ขั้นต่ำ ×ATR',0,2,0.05]]]
+];
+let CFG={...CFG_DEF};
+function cfgClean(o){
+  const c={...CFG_DEF};
+  for(const [,fs] of CFG_FIELDS)for(const [k,,mn,mx] of fs){const v=+(o&&o[k]);if(o&&o[k]!==''&&o[k]!=null&&isFinite(v))c[k]=Math.min(mx,Math.max(mn,v))}
+  ['ema1','ema2','ema3','bbP','rsiP','macdF','macdS','macdG','stK','stD','stS','atrP','swing','obMax','fvgMax'].forEach(k=>c[k]=Math.round(c[k]));
+  if(c.macdF>=c.macdS){const t=c.macdF;c.macdF=Math.min(t,c.macdS);c.macdS=Math.max(t,c.macdS+1)}
+  if(c.rsiOS>=c.rsiOB){c.rsiOS=CFG_DEF.rsiOS;c.rsiOB=CFG_DEF.rsiOB}
+  if(c.stOS>=c.stOB){c.stOS=CFG_DEF.stOS;c.stOB=CFG_DEF.stOB}
+  return c}
+try{CFG=cfgClean(JSON.parse(localStorage.getItem('goldCfg')||'{}'))}catch(e){CFG={...CFG_DEF}}
+
 function EMA(v,p){const k=2/(p+1),o=new Array(v.length).fill(null);let s=0;
   for(let i=0;i<v.length;i++){
     if(v[i]==null){continue}
@@ -405,10 +493,10 @@ function ATR(cs,p=14){const o=new Array(cs.length).fill(null);let a=0;
     const tr=i===0?cs[i].high-cs[i].low:Math.max(cs[i].high-cs[i].low,Math.abs(cs[i].high-cs[i-1].close),Math.abs(cs[i].low-cs[i-1].close));
     if(i<p){a+=tr;if(i===p-1){a/=p;o[i]=a}}else{a=(a*(p-1)+tr)/p;o[i]=a}
   }return o}
-function MACD(c){const e12=EMA(c,12),e26=EMA(c,26);
+function MACD(c){const e12=EMA(c,CFG.macdF),e26=EMA(c,CFG.macdS);
   const m=c.map((_,i)=>e12[i]!=null&&e26[i]!=null?e12[i]-e26[i]:null);
   const f=m.findIndex(x=>x!=null);const sig=new Array(c.length).fill(null);
-  if(f>=0){const sg=EMA(m.slice(f),9);sg.forEach((v,i)=>{sig[f+i]=v})}
+  if(f>=0){const sg=EMA(m.slice(f),CFG.macdG);sg.forEach((v,i)=>{sig[f+i]=v})}
   const hist=m.map((v,i)=>v!=null&&sig[i]!=null?v-sig[i]:null);
   return{m,sig,hist}}
 function pivots(cs,L=5){const hi=[],lo=[];
@@ -419,31 +507,49 @@ function pivots(cs,L=5){const hi=[],lo=[];
     }
     if(H)hi.push(cs[i].high);if(Lw)lo.push(cs[i].low);
   }return{hi,lo}}
+function SMA(v,p){const o=new Array(v.length).fill(null);
+  for(let i=p-1;i<v.length;i++){let s=0,ok=true;for(let j=i-p+1;j<=i;j++){if(v[j]==null){ok=false;break}s+=v[j]}if(ok)o[i]=s/p}return o}
+function STOCH(cs,kp,dp,sm){const n=cs.length,raw=new Array(n).fill(null);
+  for(let i=kp-1;i<n;i++){let hh=-Infinity,ll=Infinity;for(let j=i-kp+1;j<=i;j++){if(cs[j].high>hh)hh=cs[j].high;if(cs[j].low<ll)ll=cs[j].low}
+    raw[i]=hh>ll?(cs[i].close-ll)/(hh-ll)*100:50}
+  const k=SMA(raw,sm),d=SMA(k,dp);return{k,d}}
 function dedupe(arr,gap){const out=[];for(const p of arr){if(!out.some(q=>Math.abs(q-p)<gap))out.push(p)}return out}
 
 /* ============ Analysis ============ */
 function analyze(cs){
   const n=cs.length,close=cs.map(c=>c.close),i=n-1,px=close[i];
-  const e20=EMA(close,20),e50=EMA(close,50),e200=EMA(close,200),rsi=RSI(close),mc=MACD(close),bb=BB(close),atr=ATR(cs);
-  const A={cs,close,e20,e50,e200,rsi,mc,bb,atr,px};
+  const e20=EMA(close,CFG.ema1),e50=EMA(close,CFG.ema2),e200=EMA(close,CFG.ema3),rsi=RSI(close,CFG.rsiP),mc=MACD(close),bb=BB(close,CFG.bbP,CFG.bbM),atr=ATR(cs,CFG.atrP);
+  const st=STOCH(cs,CFG.stK,CFG.stD,CFG.stS);
+  const A={cs,close,e20,e50,e200,rsi,mc,bb,atr,px,st};
   const R=[];let score=0;
   const f=x=>x.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   // Trend
-  if(e20[i]!=null){const s=px>e20[i]?1:-1;score+=s;R.push({t:`ราคา ${s>0?'อยู่เหนือ':'อยู่ใต้'} EMA20 (${f(e20[i])})`,s})}
-  if(e50[i]!=null){const s=e20[i]>e50[i]?1:-1;score+=s;R.push({t:`EMA20 ${s>0?'เหนือ':'ใต้'} EMA50 (${f(e50[i])}) — ${s>0?'โมเมนตัมระยะสั้นเป็นบวก':'โมเมนตัมระยะสั้นเป็นลบ'}`,s})}
-  if(e200[i]!=null){const s=e50[i]>e200[i]?1:-1;score+=s;R.push({t:`EMA50 ${s>0?'เหนือ':'ใต้'} EMA200 (${f(e200[i])}) — ${s>0?'แนวโน้มใหญ่เป็นขาขึ้น':'แนวโน้มใหญ่เป็นขาลง'}`,s})}
+  if(e20[i]!=null){const s=px>e20[i]?1:-1;score+=s;R.push({t:`ราคา ${s>0?'อยู่เหนือ':'อยู่ใต้'} EMA${CFG.ema1} (${f(e20[i])})`,s})}
+  if(e50[i]!=null){const s=e20[i]>e50[i]?1:-1;score+=s;R.push({t:`EMA${CFG.ema1} ${s>0?'เหนือ':'ใต้'} EMA${CFG.ema2} (${f(e50[i])}) — ${s>0?'โมเมนตัมระยะสั้นเป็นบวก':'โมเมนตัมระยะสั้นเป็นลบ'}`,s})}
+  if(e200[i]!=null){const s=e50[i]>e200[i]?1:-1;score+=s;R.push({t:`EMA${CFG.ema2} ${s>0?'เหนือ':'ใต้'} EMA${CFG.ema3} (${f(e200[i])}) — ${s>0?'แนวโน้มใหญ่เป็นขาขึ้น':'แนวโน้มใหญ่เป็นขาลง'}`,s})}
   // Momentum
   const r=rsi[i];
-  if(r!=null){let s=0,t=`RSI(14) = ${r.toFixed(1)}`;
-    if(r>=70){s=0;t+=' เข้าเขต Overbought ระวังแรงขายทำกำไร/การย่อตัว'}
+  if(r!=null){let s=0,t=`RSI(${CFG.rsiP}) = ${r.toFixed(1)}`;
+    if(r>=CFG.rsiOB){s=0;t+=' เข้าเขต Overbought ระวังแรงขายทำกำไร/การย่อตัว'}
     else if(r>=55){s=1;t+=' โมเมนตัมฝั่งซื้อเหนือกว่า'}
-    else if(r<=30){s=0;t+=' เข้าเขต Oversold ระวังการเด้งกลับ'}
+    else if(r<=CFG.rsiOS){s=0;t+=' เข้าเขต Oversold ระวังการเด้งกลับ'}
     else if(r<=45){s=-1;t+=' โมเมนตัมฝั่งขายเหนือกว่า'}
     else t+=' ใกล้กลาง ยังไม่มีทิศทางชัด';
-    score+=s;R.push({t,s:(r>=70||r<=30)?0:s,w:(r>=70||r<=30)})}
+    score+=s;R.push({t,s:(r>=CFG.rsiOB||r<=CFG.rsiOS)?0:s,w:(r>=CFG.rsiOB||r<=CFG.rsiOS)})}
   const h=mc.hist[i],hp=mc.hist[i-1];
   if(h!=null){const s=h>0?1:-1;score+=s;const rising=hp!=null&&Math.abs(h)>Math.abs(hp);
     R.push({t:`MACD Histogram ${h>0?'เป็นบวก':'เป็นลบ'} และ${rising?'กำลังขยายตัว (แรงเพิ่มขึ้น)':'กำลังหดตัว (แรงอ่อนลง)'}`,s})}
+  // Stochastic (ข้อมูลประกอบ ไม่นับในคะแนน)
+  {const kk=st.k[i],dd=st.d[i],kp=st.k[i-1],dp=st.d[i-1];
+    if(kk!=null&&dd!=null){
+      const cu=kp!=null&&dp!=null&&kp<=dp&&kk>dd,cd=kp!=null&&dp!=null&&kp>=dp&&kk<dd;
+      let t=`Stochastic(${CFG.stK},${CFG.stD},${CFG.stS}) %K=${kk.toFixed(1)} %D=${dd.toFixed(1)}`,s=kk>dd?1:-1,w=false;
+      if(kk>=CFG.stOB){t+=' เข้าเขต Overbought'+(cd?' และ %K ตัดลงใต้ %D (สัญญาณชะลอขึ้น)':' ระวังย่อตัว');w=true}
+      else if(kk<=CFG.stOS){t+=' เข้าเขต Oversold'+(cu?' และ %K ตัดขึ้นเหนือ %D (สัญญาณเด้ง)':' ระวังการเด้งกลับ');w=true}
+      else if(cu)t+=' — %K ตัดขึ้นเหนือ %D';
+      else if(cd)t+=' — %K ตัดลงใต้ %D';
+      else t+=kk>dd?' — %K เหนือ %D (โมเมนตัมบวก)':' — %K ใต้ %D (โมเมนตัมลบ)';
+      R.push({t,s:w?0:s,w})}}
   // Volatility
   if(bb.up[i]!=null){
     const pb=(px-bb.lo[i])/(bb.up[i]-bb.lo[i]);
@@ -509,7 +615,8 @@ const base={layout:{background:{type:'solid',color:'#12171f'},textColor:'#8b96a6
   crosshair:{mode:0}};
 const chMain=LightweightCharts.createChart($('#cMain'),{...base,height:470,autoSize:true});
 const chRsi=LightweightCharts.createChart($('#cRsi'),{...base,height:120,autoSize:true,timeScale:{...base.timeScale,visible:false}});
-const chMacd=LightweightCharts.createChart($('#cMacd'),{...base,height:140,autoSize:true});
+const chMacd=LightweightCharts.createChart($('#cMacd'),{...base,height:140,autoSize:true,timeScale:{...base.timeScale,visible:false}});
+const chStoch=LightweightCharts.createChart($('#cStoch'),{...base,height:110,autoSize:true});
 const UP='#2ebd85',DN='#f6465d';
 const sCandle=chMain.addCandlestickSeries({upColor:UP,downColor:DN,borderUpColor:UP,borderDownColor:DN,wickUpColor:UP,wickDownColor:DN});
 const sVol=chMain.addHistogramSeries({priceFormat:{type:'volume'},priceScaleId:'vol',lastValueVisible:false,priceLineVisible:false});
@@ -518,11 +625,19 @@ const ln=(ch,color,w=1,style=0)=>ch.addLineSeries({color,lineWidth:w,lineStyle:s
 const sE20=ln(chMain,'#4c9be8'),sE50=ln(chMain,'#f0a43a'),sE200=ln(chMain,'#b07cf0',2);
 const sBu=ln(chMain,'#6b7788',1,2),sBl=ln(chMain,'#6b7788',1,2),sBm=ln(chMain,'#3b4554',1,3);
 const sRsi=chRsi.addLineSeries({color:'#e8b84a',lineWidth:2,lastValueVisible:true,priceLineVisible:false});
-sRsi.createPriceLine({price:70,color:'#f6465d77',lineWidth:1,lineStyle:2,axisLabelVisible:false});
-sRsi.createPriceLine({price:30,color:'#2ebd8577',lineWidth:1,lineStyle:2,axisLabelVisible:false});
+let rsiLn=[],stLn=[];
+function setOscLines(){
+  rsiLn.forEach(l=>sRsi.removePriceLine(l));stLn.forEach(l=>sStK.removePriceLine(l));
+  const pl=(ser,price,color)=>ser.createPriceLine({price,color,lineWidth:1,lineStyle:2,axisLabelVisible:false});
+  rsiLn=[pl(sRsi,CFG.rsiOB,'#f6465d77'),pl(sRsi,CFG.rsiOS,'#2ebd8577')];
+  stLn=[pl(sStK,CFG.stOB,'#f6465d77'),pl(sStK,CFG.stOS,'#2ebd8577'),pl(sStK,50,'#3b455488')];
+}
 chRsi.priceScale('right').applyOptions({scaleMargins:{top:0.08,bottom:0.08}});
 const sHist=chMacd.addHistogramSeries({lastValueVisible:false,priceLineVisible:false});
 const sMac=ln(chMacd,'#4c9be8',2),sSig=ln(chMacd,'#f0a43a',2);
+const sStK=chStoch.addLineSeries({color:'#4c9be8',lineWidth:2,lastValueVisible:true,priceLineVisible:false}),sStD=ln(chStoch,'#f0a43a',2);
+chStoch.priceScale('right').applyOptions({scaleMargins:{top:0.08,bottom:0.08}});
+setOscLines();
 
 
 /* ---- Position box (TP/SL zones like TradingView long/short tool) ---- */
@@ -561,7 +676,7 @@ const posBox=new PosBox();sCandle.attachPrimitive(posBox);
 
 // sync time scales
 let syncing=false;
-[[chMain,[chRsi,chMacd]],[chRsi,[chMain,chMacd]],[chMacd,[chMain,chRsi]]].forEach(([src,dst])=>{
+[[chMain,[chRsi,chMacd,chStoch]],[chRsi,[chMain,chMacd,chStoch]],[chMacd,[chMain,chRsi,chStoch]],[chStoch,[chMain,chRsi,chMacd]]].forEach(([src,dst])=>{
   src.timeScale().subscribeVisibleLogicalRangeChange(r=>{
     if(syncing||!r)return;syncing=true;dst.forEach(d=>d.timeScale().setVisibleLogicalRange(r));syncing=false;
   });
@@ -572,7 +687,7 @@ chMain.subscribeCrosshairMove(p=>{
   if(!c)return;
   const up=c.close>=c.open;
   $('#lgMain').innerHTML=`<span>O <b>${f2(c.open)}</b></span><span>H <b>${f2(c.high)}</b></span><span>L <b>${f2(c.low)}</b></span><span>C <b class="${up?'up':'dn'}">${f2(c.close)}</b></span>`+
-    `<span style="color:#4c9be8">EMA20</span><span style="color:#f0a43a">EMA50</span><span style="color:#b07cf0">EMA200</span>`;
+    `<span style="color:#4c9be8">EMA${CFG.ema1}</span><span style="color:#f0a43a">EMA${CFG.ema2}</span><span style="color:#b07cf0">EMA${CFG.ema3}</span>`;
 });
 
 function series(arr,cs){const o=[];for(let i=0;i<cs.length;i++)if(arr[i]!=null)o.push({time:cs[i].time,value:arr[i]});return o}
@@ -583,6 +698,7 @@ function applyData(full){
   sE20.setData(ema?series(A.e20,cs):[]);sE50.setData(ema?series(A.e50,cs):[]);sE200.setData(ema?series(A.e200,cs):[]);
   sBu.setData(bbv?series(A.bb.up,cs):[]);sBl.setData(bbv?series(A.bb.lo,cs):[]);sBm.setData(bbv?series(A.bb.mid,cs):[]);
   sRsi.setData(series(A.rsi,cs));
+  sStK.setData(series(A.st.k,cs));sStD.setData(series(A.st.d,cs));
   sMac.setData(series(A.mc.m,cs));sSig.setData(series(A.mc.sig,cs));
   sHist.setData(cs.map((c,i)=>A.mc.hist[i]==null?null:{time:c.time,value:A.mc.hist[i],color:A.mc.hist[i]>=0?'#2ebd8588':'#f6465d88'}).filter(Boolean));
   if(full){
@@ -605,6 +721,7 @@ function drawLines(){
     [...A.roundUp.slice(0,2),...A.roundDn.slice(0,2)].forEach(p=>add(p,'#e8b84a99',String(p),1));
   }
   ordAdd();
+  drawConcepts();
 }
 
 /* ============ Render panel ============ */
@@ -643,7 +760,7 @@ function render(){
   }
   const c=S.cs[S.cs.length-1];
   $('#px').textContent=f2(c.close);
-  renderOpt();renderOrd();
+  renderOpt();renderOrd();renderSmc();
 }
 
 function setStatus(kind,txt){$('#dot').className='dot '+(kind||'');$('#stxt').textContent=txt}
@@ -652,7 +769,7 @@ function banner(msg){const b=$('#banner');if(msg){b.textContent=msg;b.classList.
 /* ============ Load + live ============ */
 function recalc(full){
   if(S.cs.length<30)return;
-  S.A=analyze(S.cs);applyData(full);drawLines();render();
+  S.A=analyze(S.cs);S.A.smc=smcCalc(S.cs,S.A.atrv,CFG.swing);S.A.ict=ictCalc(S.cs,TFSEC[S.tf]);applyData(full);drawLines();render();
 }
 
 async function load(){
@@ -924,12 +1041,297 @@ $('#optReset').onclick=()=>{OPT=JSON.parse(JSON.stringify(OPT_DEFAULT));try{loca
 $('#resetAll').onclick=()=>{
   OFF=9;BASIS=0;S.src='spot';S.tf='1h';
   ORD={on:false,auto:false,src:'walls',slPts:25,rr:2,side:'BUY',entry:0,sl:0,tp:0,lot:0.01,t0:0,list:null};
-  try{['goldTA','goldOff','goldBasis','goldOrd'].forEach(k=>localStorage.removeItem(k))}catch(e){}
+  try{['goldTA','goldOff','goldBasis','goldOrd','goldCfg','goldTg'].forEach(k=>localStorage.removeItem(k))}catch(e){}
+  CFG={...CFG_DEF};buildCfg();applyLabels();setOscLines();NEWTG.forEach(id=>{$(id).checked=!!TG_DEF[id]});updatePanes();indCount();
   ['#tEma','#tBb','#tVol','#tSr','#tRound'].forEach(id=>{$(id).checked=false});$('#tOpt').checked=true;
   $('#off').value=OFF;$('#ref').value='';$('#basis').value=BASIS;$('#gcpx').value='';$('#src').value=S.src;
   $('#ordEntry').value='';$('#ordSl').value='';$('#ordTp').value='';$('#ordAuto').checked=false;
   buildTfs();load();
 };
+/* ============ Overlay primitive (SMC / ICT) ============ */
+const TFSEC={'5m':300,'15m':900,'1h':3600,'4h':14400,'1d':86400};
+class Ovl{
+  constructor(){this.sh=[];this.chart=null;this.series=null;this.req=null;
+    this.vb={zOrder:()=>'bottom',renderer:()=>({draw:t=>this.draw(t,0)})};
+    this.vt={zOrder:()=>'top',renderer:()=>({draw:t=>this.draw(t,1)})}}
+  attached(p){this.chart=p.chart;this.series=p.series;this.req=p.requestUpdate}
+  detached(){this.chart=null;this.series=null}
+  set(a){this.sh=a||[];if(this.req)this.req()}
+  paneViews(){return[this.vb,this.vt]}
+  updateAllViews(){}
+  draw(target,layer){
+    if(!this.sh.length||!this.chart||!this.series)return;
+    target.useBitmapCoordinateSpace(sc=>{
+      const ctx=sc.context,hr=sc.horizontalPixelRatio,vr=sc.verticalPixelRatio,ts=this.chart.timeScale(),W=sc.bitmapSize.width,H=sc.bitmapSize.height;
+      const bs=(ts.options().barSpacing||6)*hr,X=t=>{const x=ts.timeToCoordinate(t);return x==null?null:x*hr},Y=p=>{const y=this.series.priceToCoordinate(p);return y==null?null:y*vr};
+      ctx.font=Math.round(10.5*hr)+"px 'Noto Sans Thai',system-ui,sans-serif";ctx.textBaseline='middle';
+      const txt=(t,x,y,color,al)=>{ctx.textAlign=al||'left';ctx.fillStyle=color;ctx.fillText(t,x,y)};
+      for(const s of this.sh){
+        const x0=s.t0==null?null:X(s.t0);if(s.t0!=null&&x0==null)continue;
+        let xa,xb;
+        if(s.k==='hline'){xa=x0==null?0:x0;xb=s.t1==null?W:(X(s.t1)==null?null:X(s.t1));}
+        else{xa=(x0==null?0:x0)-bs/2;xb=s.t1==null?W:(X(s.t1)==null?null:X(s.t1)+bs/2);}
+        if(xb==null)continue;
+        const A=Math.max(0,Math.round(xa)),B=Math.min(W,Math.round(xb));
+        if(B<=A)continue;
+        if(s.k==='band'){
+          if(layer===0){ctx.fillStyle=s.fill;ctx.fillRect(A,0,B-A,H)}
+          else if(s.label&&ctx.measureText(s.label).width+6*hr<=B-A)txt(s.label,A+3*hr,9*hr,s.lc||'#8b96a6','left');
+        }else if(s.k==='box'){
+          const ya=Y(s.p0),yb=Y(s.p1);if(ya==null||yb==null)continue;
+          const top=Math.min(ya,yb),h=Math.max(1,Math.abs(yb-ya));
+          if(layer===0){ctx.fillStyle=s.fill;ctx.fillRect(A,top,B-A,h);
+            if(s.stroke){ctx.strokeStyle=s.stroke;ctx.lineWidth=Math.max(1,Math.round(hr));ctx.setLineDash([]);ctx.strokeRect(A+.5,top+.5,B-A,h)}}
+          else if(s.label)txt(s.label,A+4*hr,top+Math.min(9*hr,h/2),s.lc||'#cfd6e0','left');
+        }else if(s.k==='hline'&&layer===1){
+          const y=Y(s.p);if(y==null)continue;
+          ctx.strokeStyle=s.color;ctx.lineWidth=Math.max(1,Math.round(hr));ctx.setLineDash((s.dash||[]).map(d=>d*hr));
+          ctx.beginPath();ctx.moveTo(A,y);ctx.lineTo(B,y);ctx.stroke();ctx.setLineDash([]);
+          if(s.label){
+            if(s.t1==null)txt(s.label,B-4*hr,y-7*hr,s.color,'right');
+            else txt(s.label,(A+B)/2,y+(s.below?8:-7)*hr,s.color,'center');
+          }
+        }
+      }
+    });
+  }
+}
+const ovl=new Ovl();sCandle.attachPrimitive(ovl);
+
+/* ============ SMC (Smart Money Concepts) ============ */
+function smcCalc(cs,atr,L){
+  const n=cs.length,a=atr||1,R={trend:0,ev:[],obs:[],fvgs:[],eqh:[],eql:[],swH:[],swL:[],range:null,leg:null};
+  if(n<2*L+6)return R;
+  const isH=new Array(n).fill(false),isL=new Array(n).fill(false);
+  for(let i=L;i<n-L;i++){let h=true,l=true;
+    for(let j=1;j<=L;j++){
+      if(!(cs[i].high>cs[i-j].high&&cs[i].high>=cs[i+j].high))h=false;
+      if(!(cs[i].low<cs[i-j].low&&cs[i].low<=cs[i+j].low))l=false;
+      if(!h&&!l)break}
+    isH[i]=h;isL[i]=l}
+  let trend=0,lh=null,ll=null;const minGap=CFG.fvgMin*a;
+  for(let i=0;i<n;i++){
+    const p=i-L;
+    if(p>=L){
+      if(isH[p]){lh={i:p,p:cs[p].high,x:false};R.swH.push(lh)}
+      if(isL[p]){ll={i:p,p:cs[p].low,x:false};R.swL.push(ll)}
+    }
+    const c=cs[i].close;
+    // mitigate order blocks / fill gaps first
+    for(const o of R.obs){if(o.m==null&&o.i<i){if(o.dir===1&&c<o.lo)o.m=i;else if(o.dir===-1&&c>o.hi)o.m=i}}
+    for(const g of R.fvgs){if(g.f==null&&i>g.i+1){
+      if(g.dir===1){if(cs[i].low<=g.bot)g.f=i;else if(cs[i].low<g.top)g.top=cs[i].low}
+      else{if(cs[i].high>=g.top)g.f=i;else if(cs[i].high>g.bot)g.bot=cs[i].high}}}
+    if(i>=2){const c0=cs[i-2],c2=cs[i];
+      if(c2.low>c0.high&&c2.low-c0.high>=minGap)R.fvgs.push({dir:1,i:i-1,top:c2.low,bot:c0.high,f:null});
+      else if(c2.high<c0.low&&c0.low-c2.high>=minGap)R.fvgs.push({dir:-1,i:i-1,top:c0.low,bot:c2.high,f:null})}
+    if(lh&&!lh.x&&c>lh.p){
+      const type=trend===-1?'CHoCH':'BOS';lh.x=true;trend=1;
+      R.ev.push({type,dir:1,p:lh.p,i0:lh.i,i1:i});
+      let k=lh.i,m=Infinity;for(let j=lh.i;j<i;j++)if(cs[j].low<m){m=cs[j].low;k=j}
+      R.obs.push({dir:1,i:k,hi:cs[k].high,lo:cs[k].low,m:null,type});
+    }
+    if(ll&&!ll.x&&c<ll.p){
+      const type=trend===1?'CHoCH':'BOS';ll.x=true;trend=-1;
+      R.ev.push({type,dir:-1,p:ll.p,i0:ll.i,i1:i});
+      let k=ll.i,m=-Infinity;for(let j=ll.i;j<i;j++)if(cs[j].high>m){m=cs[j].high;k=j}
+      R.obs.push({dir:-1,i:k,hi:cs[k].high,lo:cs[k].low,m:null,type});
+    }
+  }
+  R.trend=trend;
+  const tol=0.15*a;
+  const eqScan=(sw,isHigh)=>{const out=[];
+    for(let k=sw.length-1;k>=1&&out.length<3;k--){const x=sw[k],y=sw[k-1];
+      if(Math.abs(x.p-y.p)<=tol){const lv=isHigh?Math.max(x.p,y.p):Math.min(x.p,y.p);let sw_=false;
+        for(let j=x.i+1;j<n;j++){if(isHigh?cs[j].high>lv+tol*0.3:cs[j].low<lv-tol*0.3){sw_=true;break}}
+        if(!sw_)out.push({i0:y.i,i1:x.i,p:(x.p+y.p)/2})}}
+    return out};
+  R.eqh=eqScan(R.swH,true);R.eql=eqScan(R.swL,false);
+  const lH=R.swH[R.swH.length-1],lL=R.swL[R.swL.length-1];
+  if(lH&&lL&&lH.p>lL.p){
+    const top=lH.p,bot=lL.p,r=top-bot;
+    R.range={top,bot,eq:(top+bot)/2,i0:Math.min(lH.i,lL.i)};
+    if(lL.i<lH.i)R.leg={dir:1,top,bot,i0:lL.i,i1:lH.i,z0:top-0.62*r,z1:top-0.79*r,mid:top-0.705*r};
+    else R.leg={dir:-1,top,bot,i0:lH.i,i1:lL.i,z0:bot+0.62*r,z1:bot+0.79*r,mid:bot+0.705*r};
+  }
+  return R;
+}
+
+/* ============ ICT ============ */
+const ET_F=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',weekday:'short'});
+const etCache=new Map(),DAYMS=86400000;
+function etParts(ms){const o={};ET_F.formatToParts(ms).forEach(x=>o[x.type]=x.value);return o}
+function etOf(t){
+  let v=etCache.get(t);if(v)return v;
+  const o=etParts((t-TZ)*1000),dow={Mon:0,Tue:1,Wed:2,Thu:3,Fri:4,Sat:5,Sun:6}[o.weekday];
+  v={day:`${o.year}-${o.month}-${o.day}`,m:(+o.hour%24)*60+(+o.minute),wk:Date.UTC(+o.year,+o.month-1,+o.day)-(dow===6?-1:dow)*DAYMS};
+  if(etCache.size>5000)etCache.clear();
+  etCache.set(t,v);return v}
+const KZ=[['Asia KZ',1200,1440,'asia','rgba(176,124,240,.08)','#c8a2f5'],['London KZ',120,300,'ldn','rgba(76,155,232,.09)','#7db6f0'],['NY AM KZ',420,600,'ny','rgba(46,189,133,.09)','#5fd3a4'],['London Close KZ',600,720,'lc','rgba(240,164,58,.08)','#f3b86b']];
+const SB=[['SB 03–04',180,240],['SB 10–11',600,660],['SB 14–15',840,900]];
+function ictCalc(cs,tfs){
+  const n=cs.length,R={intraday:tfs<86400,kzOk:tfs<=3600,zones:[],mid:null,pdh:null,pdl:null,pwh:null,pwl:null};
+  if(n<2)return R;
+  if(!R.intraday){R.pdh={i:n-1,p:cs[n-2].high};R.pdl={i:n-1,p:cs[n-2].low};return R}
+  const e=cs.map(c=>etOf(c.time));
+  const groups=key=>{const g=[];let cur=null;for(let i=0;i<n;i++){const k=e[i][key];
+    if(!cur||cur.k!==k){cur={k,i0:i,i1:i,hi:cs[i].high,lo:cs[i].low};g.push(cur)}else{cur.i1=i;if(cs[i].high>cur.hi)cur.hi=cs[i].high;if(cs[i].low<cur.lo)cur.lo=cs[i].low}}return g};
+  const dg=groups('day'),cd=dg[dg.length-1];
+  R.mid={i:cd.i0,p:cs[cd.i0].open};
+  if(dg.length>1){const pd=dg[dg.length-2];R.pdh={i:cd.i0,p:pd.hi};R.pdl={i:cd.i0,p:pd.lo}}
+  const wg=groups('wk'),cw=wg[wg.length-1];
+  if(wg.length>1){const pw=wg[wg.length-2];R.pwh={i:cw.i0,p:pw.hi};R.pwl={i:cw.i0,p:pw.lo}}
+  if(R.kzOk){
+    const run=(name,a,b,kind,fill,lc)=>{let st=-1;
+      for(let i=0;i<=n;i++){const inz=i<n&&e[i].m>=a&&e[i].m<b&&(st<0||e[i].day===e[st].day);
+        if(inz){if(st<0)st=i}else if(st>=0){R.zones.push({name,kind,fill,lc,i0:st,i1:i-1});st=(i<n&&e[i].m>=a&&e[i].m<b)?i:-1}}};
+    KZ.forEach(z=>run(z[0],z[1],z[2],'kz',z[4],z[5]));
+    SB.forEach(z=>run(z[0],z[1],z[2],'sb','rgba(232,184,74,.16)','#e8b84a'));
+  }
+  return R;
+}
+// เวลา Kill Zone ปัจจุบัน/ถัดไป (ตามนาฬิกาจริง)
+const HM_BK=new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',hour12:false,hour:'2-digit',minute:'2-digit'});
+const WD_BK=new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',weekday:'short'});
+const DK_BK=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok'});
+let kzCache=null;
+function kzNow(){
+  const now=Date.now(),b=Math.floor(now/300000);
+  if(kzCache&&kzCache.b===b)return kzCache.v;
+  const act=ms=>{const o=etParts(ms),m=(+o.hour%24)*60+(+o.minute),wd=o.weekday;
+    if(wd==='Sat'||(wd==='Fri'&&m>=1020)||(wd==='Sun'&&m<1080))return null;
+    for(const z of KZ)if(m>=z[1]&&m<z[2])return z[0];return null};
+  const t0=b*300000,cur=act(t0);let v={cur:null,next:null};
+  if(cur){let e=t0;while(e<t0+DAYMS&&act(e)===cur)e+=300000;v.cur={name:cur,end:e}}
+  let t=t0,prev=cur;
+  for(let k=0;k<576;k++){t+=300000;const a=act(t);if(a&&a!==prev&&!(v.cur&&a===v.cur.name&&t<v.cur.end)){let e=t;while(e<t+DAYMS&&act(e)===a)e+=300000;v.next={name:a,start:t,end:e};break}prev=a}
+  kzCache={b,v};return v}
+
+/* ============ วาด SMC/ICT บนกราฟ ============ */
+function drawConcepts(){
+  const A=S.A;if(!A||!A.smc){ovl.set([]);return}
+  const cs=S.cs,n=cs.length,T=i=>cs[Math.max(0,Math.min(n-1,i))].time,ck=id=>$(id).checked,sh=[];
+  const m=A.smc,ic=A.ict,tfs=TFSEC[S.tf];
+  const box=(i0,i1,p0,p1,fill,stroke,label,lc)=>sh.push({k:'box',t0:T(i0),t1:i1==null?null:T(i1),p0,p1,fill,stroke,label,lc});
+  const hl=(i0,i1,p,color,dash,label,below)=>sh.push({k:'hline',t0:i0==null?null:T(i0),t1:i1==null?null:T(i1),p,color,dash,label,below});
+  if(ck('#tSmcPd')&&m.range){const r=m.range;
+    box(r.i0,null,r.top,r.eq,'rgba(246,70,93,.07)',null,'Premium','#f6465d99');
+    box(r.i0,null,r.eq,r.bot,'rgba(46,189,133,.07)',null,'Discount','#2ebd8599');
+    hl(r.i0,null,r.eq,'#8b96a6',[4,4],'EQ 50%');}
+  if(ck('#tSmcFvg')){
+    [1,-1].forEach(d=>m.fvgs.filter(g=>g.dir===d&&g.f==null).slice(-CFG.fvgMax).forEach(g=>
+      box(g.i,null,g.top,g.bot,d===1?'rgba(76,155,232,.17)':'rgba(176,124,240,.17)',d===1?'#4c9be8aa':'#b07cf0aa',d===1?'FVG ▲':'FVG ▼',d===1?'#8fc2f5':'#cfb0f7')));}
+  if(ck('#tSmcOb')){
+    [1,-1].forEach(d=>m.obs.filter(o=>o.dir===d&&o.m==null).slice(-CFG.obMax).forEach(o=>
+      box(o.i,null,o.hi,o.lo,d===1?'rgba(46,189,133,.20)':'rgba(246,70,93,.20)',d===1?'#2ebd85':'#f6465d',d===1?'OB ▲':'OB ▼',d===1?'#8fe3c2':'#ff9aa8')));}
+  if(ck('#tSmcStruct')){
+    m.ev.slice(-6).forEach(e=>hl(e.i0,e.i1,e.p,e.dir===1?'#2ebd85':'#f6465d',[5,4],e.type,e.dir!==1));}
+  if(ck('#tSmcEq')){
+    m.eqh.forEach(q=>hl(q.i0,null,q.p,'#f0a43a',[2,3],'EQH'));
+    m.eql.forEach(q=>hl(q.i0,null,q.p,'#4c9be8',[2,3],'EQL'));}
+  if(ic){
+    if((ck('#tIctKz')||ck('#tIctSb'))&&ic.kzOk){
+      ic.zones.forEach(z=>{if((z.kind==='kz'&&!ck('#tIctKz'))||(z.kind==='sb'&&!ck('#tIctSb')))return;
+        sh.push({k:'band',t0:T(z.i0),t1:T(z.i1),fill:z.fill,label:z.name,lc:z.lc})})}
+    if(ck('#tIctLv')){
+      if(ic.mid)hl(ic.mid.i,null,ic.mid.p,'#4c9be8',[2,3],'Midnight Open');
+      if(ic.pdh)hl(ic.pdh.i,null,ic.pdh.p,'#d4b04a',[6,3],'PDH');
+      if(ic.pdl)hl(ic.pdl.i,null,ic.pdl.p,'#d4b04a',[6,3],'PDL');
+      if(ic.pwh)hl(ic.pwh.i,null,ic.pwh.p,'#9aa5b5',[6,3],'PWH');
+      if(ic.pwl)hl(ic.pwl.i,null,ic.pwl.p,'#9aa5b5',[6,3],'PWL');}
+    if(ck('#tIctOte')&&m.leg){const g=m.leg;
+      box(g.i1,null,g.z0,g.z1,'rgba(232,184,74,.17)','#e8b84a99','OTE '+(g.dir===1?'Buy':'Sell')+' 62–79%','#f0cf7a');
+      hl(g.i1,null,g.mid,'#e8b84a',[3,3],'70.5%');}
+  }
+  ovl.set(sh);
+}
+
+/* ============ สรุป SMC / ICT ============ */
+function renderSmc(){
+  const A=S.A,el=$('#smcBody');if(!A||!A.smc||!el)return;
+  $('#smcTf').textContent='· '+TFN[S.tf];
+  const m=A.smc,ic=A.ict,px=A.px,n=S.cs.length;
+  const row=(k,v)=>`<div class="sr"><span class="mut">${k}</span><span>${v}</span></div>`;
+  const sg=t=>`<div class="sg">${t}</div>`;
+  const dist=p=>`<span class="${p>px?'dn':'up'}">${p>px?'+':''}${f2(p-px)}</span>`;
+  let h=sg('SMC');
+  if(!m.ev.length)h+=row('โครงสร้างตลาด','<span class="mut">ข้อมูลยังไม่พอ</span>');
+  else{const l=m.ev[m.ev.length-1];
+    h+=row('โครงสร้างตลาด',(m.trend===1?'<b class="up">Bullish ▲</b>':'<b class="dn">Bearish ▼</b>'));
+    h+=row('การเบรกล่าสุด',`${l.type} ${l.dir>0?'↑':'↓'} ที่ ${f2(l.p)} <span class="mut">(${n-1-l.i1} แท่งก่อน)</span>`)}
+  let pdTxt=null;
+  if(m.range){const r=m.range,pos=(px-r.bot)/(r.top-r.bot)*100;
+    pdTxt=pos>100?'above':pos<0?'below':pos>50?'prem':'disc';
+    h+=row('ตำแหน่งในกรอบ',pos>100?'<span class="dn">เหนือกรอบ (Premium สุดขีด)</span>':pos<0?'<span class="up">ใต้กรอบ (Discount สุดขีด)</span>':`${pos>50?'<b class="dn">Premium</b>':'<b class="up">Discount</b>'} ${pos.toFixed(0)}%`);
+    h+=row('กรอบ / EQ 50%',`${f2(r.bot)} – ${f2(r.top)} · <span class="mut">${f2(r.eq)}</span>`)}
+  const near=(arr,pick)=>arr.length?arr.reduce((a,b)=>pick(b)<pick(a)?b:a):null;
+  const dz=o=>px>=o.lo&&px<=o.hi?0:Math.min(Math.abs(px-o.lo),Math.abs(px-o.hi));
+  const ob=near(m.obs.filter(o=>o.m==null),dz);
+  const obB=near(m.obs.filter(o=>o.m==null&&o.dir===1),dz),obS=near(m.obs.filter(o=>o.m==null&&o.dir===-1),dz);
+  const zt=(o,nm)=>o?`${nm} ${f2(o.lo)}–${f2(o.hi)}${dz(o)===0?' <b class="warn">(ราคาอยู่ในโซน)</b>':''}`:'<span class="mut">ไม่มี</span>';
+  h+=row('Order Block ▲ (รับ)',zt(obB,''));h+=row('Order Block ▼ (ต้าน)',zt(obS,''));
+  const fz=g=>({lo:g.bot,hi:g.top}),fB=near(m.fvgs.filter(g=>g.f==null&&g.dir===1).map(g=>({...g,lo:g.bot,hi:g.top})),dz),fS=near(m.fvgs.filter(g=>g.f==null&&g.dir===-1).map(g=>({...g,lo:g.bot,hi:g.top})),dz);
+  h+=row('FVG ▲ ใกล้สุด',zt(fB,''));h+=row('FVG ▼ ใกล้สุด',zt(fS,''));
+  const eh=m.eqh.map(q=>q.p).filter(p=>p>px).sort((a,b)=>a-b)[0],el_=m.eql.map(q=>q.p).filter(p=>p<px).sort((a,b)=>b-a)[0];
+  h+=row('สภาพคล่อง EQH / EQL',`${eh!=null?f2(eh)+' '+dist(eh):'<span class="mut">–</span>'} / ${el_!=null?f2(el_)+' '+dist(el_):'<span class="mut">–</span>'}`);
+  h+=sg('ICT');
+  const kz=kzNow(),hm=ms=>HM_BK.format(ms),dtag=ms=>DK_BK.format(ms)===DK_BK.format(Date.now())?'':' ('+WD_BK.format(ms)+')';
+  h+=row('Kill Zone ตอนนี้',kz.cur?`<b class="up">${kz.cur.name}</b> <span class="mut">ถึง ${hm(kz.cur.end)}${dtag(kz.cur.end)} ไทย</span>`:'<span class="mut">นอก Kill Zone</span>');
+  if(kz.next)h+=row('Kill Zone ถัดไป',`${kz.next.name} <span class="mut">${hm(kz.next.start)}–${hm(kz.next.end)}${dtag(kz.next.start)} ไทย</span>`);
+  if(ic&&ic.mid)h+=row('Midnight Open (00:00 NY)',`${f2(ic.mid.p)} ${dist(ic.mid.p)} <span class="mut">${px>=ic.mid.p?'ราคาเหนือ open':'ราคาใต้ open'}</span>`);
+  if(ic&&ic.pdh)h+=row('PDH / PDL (เมื่อวาน)',`${f2(ic.pdh.p)} / ${f2(ic.pdl.p)}`);
+  if(ic&&ic.pwh)h+=row('PWH / PWL (สัปดาห์ก่อน)',`${f2(ic.pwh.p)} / ${f2(ic.pwl.p)}`);
+  if(m.leg){const g=m.leg,lo=Math.min(g.z0,g.z1),hi=Math.max(g.z0,g.z1),inz=px>=lo&&px<=hi;
+    h+=row(`OTE ${g.dir===1?'(ขาขึ้น → มองซื้อ)':'(ขาลง → มองขาย)'}`,`${f2(lo)}–${f2(hi)}${inz?' <b class="warn">(ราคาอยู่ในโซน)</b>':''}`)}
+  // สรุปแนวทาง (ตามกฎ)
+  let bias='';
+  if(m.ev.length&&pdTxt){
+    if(m.trend===1&&(pdTxt==='disc'||pdTxt==='below'))bias='โครงสร้างขาขึ้น + ราคาอยู่โซน Discount → เป็นโซนที่ SMC/ICT มองหาจังหวะ <b class="up">ซื้อ</b> (OB ▲ / FVG ▲ / OTE)';
+    else if(m.trend===1)bias='โครงสร้างขาขึ้น แต่ราคาอยู่โซน Premium → ราคาค่อนข้างแพง <b class="warn">รอย่อ</b> ลงมาที่ Discount/OB/FVG ก่อน';
+    else if(m.trend===-1&&(pdTxt==='prem'||pdTxt==='above'))bias='โครงสร้างขาลง + ราคาอยู่โซน Premium → เป็นโซนที่ SMC/ICT มองหาจังหวะ <b class="dn">ขาย</b> (OB ▼ / FVG ▼ / OTE)';
+    else if(m.trend===-1)bias='โครงสร้างขาลง แต่ราคาอยู่โซน Discount → <b class="warn">รอเด้ง</b> ขึ้นไปที่ Premium/OB/FVG ก่อน';
+  }
+  if(bias)h+=`<div class="note" style="margin-top:8px;color:var(--txt)">💡 ${bias}</div>`;
+  el.innerHTML=h;
+}
+
+/* ============ ตั้งค่าอินดิเคเตอร์ / แผงล่าง / ตัวเลือก SMC-ICT ============ */
+const NEWTG=['#tPrsi','#tPmacd','#tPstoch','#tSmcStruct','#tSmcOb','#tSmcFvg','#tSmcEq','#tSmcPd','#tIctKz','#tIctSb','#tIctLv','#tIctOte'];
+const TG_DEF={'#tPrsi':true,'#tPmacd':true,'#tPstoch':true};
+function loadTg(){let o={};try{o=JSON.parse(localStorage.getItem('goldTg')||'{}')}catch(e){}
+  NEWTG.forEach(id=>{$(id).checked=(id in o)?!!o[id]:!!TG_DEF[id]})}
+function saveTg(){const o={};NEWTG.forEach(id=>o[id]=$(id).checked);try{localStorage.setItem('goldTg',JSON.stringify(o))}catch(e){}}
+function updatePanes(){
+  const P=[['#tPrsi','#pRsi',chRsi],['#tPmacd','#pMacd',chMacd],['#tPstoch','#pStoch',chStoch]];let last=null;
+  P.forEach(([t,p,ch])=>{const on=$(t).checked;$(p).style.display=on?'':'none';if(on)last=ch});
+  P.forEach(([t,p,ch])=>ch.applyOptions({timeScale:{visible:ch===last}}));
+  const r=chMain.timeScale().getVisibleLogicalRange();
+  if(r)setTimeout(()=>{syncing=true;P.forEach(([t,p,ch])=>{if($(t).checked)ch.timeScale().setVisibleLogicalRange(r)});syncing=false},60);
+}
+function applyLabels(){
+  $('#lblEma').textContent=`EMA ${CFG.ema1}/${CFG.ema2}/${CFG.ema3}`;
+  $('#lblBb').textContent=`Bollinger Bands (${CFG.bbP}, ${CFG.bbM}σ)`;
+  $('#tagRsi').textContent=`RSI (${CFG.rsiP})`;
+  $('#tagMacd').textContent=`MACD (${CFG.macdF},${CFG.macdS},${CFG.macdG})`;
+  $('#tagStoch').textContent=`Stochastic (${CFG.stK},${CFG.stD},${CFG.stS})`;
+}
+function buildCfg(){
+  $('#cfgGrid').innerHTML=CFG_FIELDS.map(([t,fs])=>`<div class="cfgG"><b>${t}</b><div class="cf">${fs.map(([k,l,mn,mx,st])=>`<label>${l}<input type="number" data-k="${k}" min="${mn}" max="${mx}" step="${st}" value="${CFG[k]}"></label>`).join('')}</div></div>`).join('');
+  let tm=null;
+  $('#cfgGrid').querySelectorAll('input').forEach(i=>i.addEventListener('change',()=>{
+    const o={};$('#cfgGrid').querySelectorAll('input').forEach(x=>o[x.dataset.k]=x.value);
+    const c=cfgClean(o);CFG=c;try{localStorage.setItem('goldCfg',JSON.stringify(c))}catch(e){}
+    $('#cfgGrid').querySelectorAll('input').forEach(x=>x.value=CFG[x.dataset.k]);
+    $('#cfgMsg').textContent='ใช้ค่าใหม่แล้ว';clearTimeout(tm);tm=setTimeout(()=>$('#cfgMsg').textContent='',2500);
+    applyLabels();setOscLines();if(S.A){recalc(true);loadMtf()}
+  }));
+}
+$('#cfgReset').onclick=()=>{CFG={...CFG_DEF};try{localStorage.removeItem('goldCfg')}catch(e){}buildCfg();applyLabels();setOscLines();if(S.A){recalc(true);loadMtf()}$('#cfgMsg').textContent='กลับเป็นค่าเริ่มต้นแล้ว'};
+NEWTG.forEach(id=>$(id).addEventListener('change',()=>{saveTg();if(id.startsWith('#tP'))updatePanes();else if(S.A)drawLines()}));
+function indCount(){const n=NEWTG.slice(3).filter(id=>$(id).checked).length;$('#indCnt').textContent=n?'· SMC/ICT เปิดอยู่ '+n+' รายการ':''}
+NEWTG.forEach(id=>$(id).addEventListener('change',indCount));
+loadTg();buildCfg();applyLabels();updatePanes();indCount();if(MOB())$('#indD').open=false;
+
 bindOrd();
 buildTfs();load();
 
