@@ -189,6 +189,8 @@ i.id.h{background:var(--dn)} i.id.m{background:var(--warn)} i.id.l{background:#7
 .hero.due{background:rgba(240,164,58,.16);border-color:var(--warn);animation:ckp 1.8s ease-in-out infinite}.hero.due .ht{color:var(--warn)}
 .hero.stale,.hero.none{background:rgba(246,70,93,.12);border-color:rgba(246,70,93,.6)}.hero.stale .ht,.hero.none .ht{color:var(--dn)}
 .hero.closed .ht{color:var(--mut)}
+.hero.alert{background:rgba(246,70,93,.18);border-color:var(--dn);animation:ckr 1.2s ease-in-out infinite}.hero.alert .ht{color:var(--dn)}
+@keyframes ckr{0%,100%{box-shadow:0 0 0 0 rgba(246,70,93,.55)}50%{box-shadow:0 0 0 7px rgba(246,70,93,0)}}
 .slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 8px}
 .slot{border:1px solid var(--line);border-radius:10px;padding:8px 4px;text-align:center;background:var(--panel2)}
 .slot b{display:block;font-size:18px;font-variant-numeric:tabular-nums;line-height:1.2}
@@ -206,7 +208,7 @@ i.id.h{background:var(--dn)} i.id.m{background:var(--warn)} i.id.l{background:#7
 .tdot{display:none;position:absolute;top:3px;right:4px;width:9px;height:9px;border-radius:50%;background:var(--dn);animation:ckd 1.6s ease-in-out infinite}
 @keyframes ckp{0%,100%{box-shadow:0 0 0 0 rgba(240,164,58,.5)}50%{box-shadow:0 0 0 7px rgba(240,164,58,0)}}
 @keyframes ckd{0%,100%{box-shadow:0 0 0 0 rgba(246,70,93,.6)}50%{box-shadow:0 0 0 5px rgba(246,70,93,0)}}
-@media(prefers-reduced-motion:reduce){.hero.due,.tdot{animation:none}}
+@media(prefers-reduced-motion:reduce){.hero.due,.hero.alert,.tdot{animation:none}}
 .hSet{margin:0;font-size:12px;color:var(--mut)}
 .hSet summary{cursor:pointer;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);list-style:none;white-space:nowrap}
 .hSet summary::-webkit-details-marker{display:none}
@@ -438,6 +440,8 @@ i.vd.u{background:var(--up)} i.vd.d{background:var(--dn)}
           <div class="slots" id="ckSlots"></div>
           <details class="ckMore" id="ckMore"><summary id="ckNews">📰 ข่าว · วิธีนับเวลา</summary>
             <div class="note">นับวันใหม่ตอน 07:30 (เวลาไทย) · ช่องจะติ๊กเองเมื่อมีการอ่านข้อมูลในช่วงนั้น (ช่วงของ 14:00 เริ่ม 13:00, ช่วงของ 19:45 เริ่ม 18:45) · อ่านก่อนข่าวแรงออกราว 30 นาที · อิงเวลามาตรฐานของสหรัฐฯ ฤดูร้อนเลื่อนเข้ามา 1 ชั่วโมง · ตลาดปิดสุดสัปดาห์ (ประมาณ เสาร์ 05:00 – จันทร์ 06:00) · เป็นแนวทาง ไม่ใช่สัญญาณซื้อขาย</div>
+            <div class="ctl" style="margin-top:8px"><span>⚡ เตือนเมื่อราคาผันผวนผิดปกติ:</span><select id="volLv" style="background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font:inherit"><option value="high">ไว (4 เท่าของปกติ)</option><option value="norm">ปกติ (5 เท่า)</option><option value="low">ไม่ไว (6.5 เท่า)</option><option value="off">ปิด</option></select></div>
+            <div class="note" id="volInfo" style="margin-top:4px">เช็กแท่ง 5 นาทีจาก Binance ทุก 1 นาที ขณะเปิดหน้าเว็บอยู่เท่านั้น (ปิดจอ/ปิดแท็บแล้วไม่เตือน) · ตัวเลขเกณฑ์เป็นค่าประมาณ ปรับได้</div>
           </details>
           <div class="omode" id="omode" role="radiogroup" aria-label="เกณฑ์หากำแพง"><span class="mut">เกณฑ์กำแพง:</span>
             <button data-m="vol" class="on">Volume</button><button data-m="oi">OI</button><button data-m="both">ทั้งสอง (รวมกัน)</button></div>
@@ -1220,8 +1224,10 @@ function renderCk(){
     return '<div class="slot '+cls+'"><b>'+s.t+'</b><small>'+s.l+'</small><em>'+st+'</em></div>';
   }).join('');
   const how='เปิดหน้า Chain ของ TradingView แล้วแตะบุ๊กมาร์ก “อ่าน Options”';
+  if(VOLA&&(now-VOLA.t>=30*60e3||(lt&&lt>VOLA.t+15*60e3))){VOLA=null;try{localStorage.removeItem('goldVol')}catch(e){}}
   let cls,ic,ti,su;
-  if(!lt){cls='none';ic='⚠️';ti='ยังเป็นข้อมูลตัวอย่าง';su='อ่านข้อมูลจริงก่อนใช้งาน — '+how}
+  if(VOLA&&!closed){cls='alert';ic='⚡';ti='ผันผวนผิดปกติ — กำแพงอาจใช้ไม่ได้';su='ราคาเคลื่อน '+(VOLA.net>0?'+':'')+VOLA.net.toFixed(1)+' จุดใน 15 นาที (ปกติ 5 นาทีเคลื่อน ~'+VOLA.atr.toFixed(1)+') · ตรวจพบ '+hmTh(VOLA.t)+' · รอให้นิ่ง 15–30 นาที แล้วอ่าน Options และซิงค์ราคากราฟใหม่ก่อนตัดสินใจ'}
+  else if(!lt){cls='none';ic='⚠️';ti='ยังเป็นข้อมูลตัวอย่าง';su='อ่านข้อมูลจริงก่อนใช้งาน — '+how}
   else if(closed){cls='closed';ic='🌙';ti='ตลาดทองปิด (สุดสัปดาห์)';su='อ่านล่าสุด '+hmTh(lt)+' · ยังไม่ต้องอ่านข้อมูลใหม่ จนกว่าตลาดจะเปิด'}
   else if(dueSlot){cls='due';ic='⏰';ti='ถึงเวลาอ่านรอบ '+dueSlot.t;su='ข้อมูลล่าสุด '+hmTh(lt)+' ('+fm(age)+'ที่แล้ว) — '+how}
   else if(age>3*36e5){cls='stale';ic='⚠️';ti='ข้อมูลเก่า '+fm(age);su='อ่านล่าสุด '+hmTh(lt)+' · ถ้าตลาดกำลังเคลื่อนไหว ควรอ่านใหม่ — '+how}
@@ -1231,8 +1237,32 @@ function renderCk(){
   $('#ckSlots').innerHTML=pills;
   const nw=document.getElementById('nws'),nt=nw&&nw.textContent.trim();
   const cn=$('#ckNews');if(cn)cn.textContent=nt?'📰 '+nt:'📰 ข่าว · วิธีนับเวลา';
-  const td=$('#tdot');if(td)td.style.display=(cls==='due'||cls==='stale'||cls==='none')?'block':'none';
+  const td=$('#tdot');if(td)td.style.display=(cls==='due'||cls==='stale'||cls==='none'||cls==='alert')?'block':'none';
+  const vi=$('#volInfo');if(vi&&VOLI)vi.textContent=VOLI+' · เช็กทุก 1 นาทีขณะเปิดหน้าเว็บ';
 }
+// ===== ตัวเตือนความผันผวนผิดปกติ (แท่ง 5 นาที) =====
+const VOL_K={high:4,norm:5,low:6.5};
+let volLv='norm';try{volLv=localStorage.getItem('goldVolLv')||'norm'}catch(e){}
+let VOLA=null,VOLI='';
+try{const v=JSON.parse(localStorage.getItem('goldVol')||'null');if(v&&Date.now()-v.t<30*60e3)VOLA=v}catch(e){}
+async function checkVol(){
+  if(document.hidden||volLv==='off')return;
+  try{
+    const cs=await klines(S.src,'5m',40);
+    if(cs.length<30)return;
+    const base=cs.slice(-23,-3),last3=cs.slice(-3);
+    const tr=base.map((c,i,a)=>Math.max(c.high-c.low,i?Math.abs(c.high-a[i-1].close):0,i?Math.abs(c.low-a[i-1].close):0));
+    const A=tr.reduce((x,y)=>x+y,0)/tr.length,k=VOL_K[volLv]||5;
+    const net=last3[2].close-last3[0].open,rng=Math.max(...last3.map(c=>c.high-c.low));
+    const thrMove=Math.max(A*k,6),thrRng=Math.max(A*k*0.9,6);
+    VOLI='ตรวจล่าสุด '+hmTh(Date.now())+' · 15 นาทีที่ผ่านมาเคลื่อน '+(net>0?'+':'')+net.toFixed(1)+' จุด (เกณฑ์ ±'+thrMove.toFixed(1)+') · แท่งกว้างสุด '+rng.toFixed(1)+' (เกณฑ์ '+thrRng.toFixed(1)+') · ปกติ 5 นาทีเคลื่อน ~'+A.toFixed(1);
+    if(Math.abs(net)>=thrMove||rng>=thrRng){VOLA={t:Date.now(),net,atr:A};try{localStorage.setItem('goldVol',JSON.stringify(VOLA))}catch(e){}}
+    renderCk();
+  }catch(e){}
+}
+window.__volCheck=checkVol;
+(function(){const sel=$('#volLv');if(!sel)return;sel.value=volLv;sel.onchange=e=>{volLv=e.target.value;try{localStorage.setItem('goldVolLv',volLv)}catch(x){}if(volLv==='off'){VOLA=null;VOLI='ปิดตัวเตือนอยู่';try{localStorage.removeItem('goldVol')}catch(x){}renderCk()}else checkVol()}})();
+setTimeout(checkVol,4000);setInterval(checkVol,60000);
 setTimeout(renderCk,1500);setInterval(renderCk,60000);
 // ===== ซิงก์ขึ้น GitHub (branch data / options.json) =====
 const CLOUD={repo:'suphawatsr67work-bit/gold-analysis',br:'data',path:'options.json'};
