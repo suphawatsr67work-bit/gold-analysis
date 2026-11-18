@@ -957,7 +957,12 @@ function pv(r){const m=omode();return m==='oi'?(r[4]||0):m==='both'?r[2]+(r[4]||
 function oname(){return OMODE_NAME[omode()]}
 function optStats(){
   const R=OPT.rows,tc=R.reduce((a,r)=>a+cv(r),0),tp=R.reduce((a,r)=>a+pv(r),0);
-  const cw=R.reduce((a,r)=>cv(r)>cv(a)?r:a,R[0]),pw=R.reduce((a,r)=>pv(r)>pv(a)?r:a,R[0]);
+  // กำแพง: Call Wall = ปริมาณ Call สูงสุดที่ Strike เหนือราคา (แนวต้าน) · Put Wall = ปริมาณ Put สูงสุดที่ Strike ใต้ราคา (แนวรับ)
+  // ถ้ายังไม่มีราคา หรือฝั่งนั้นไม่มีข้อมูล จะใช้ค่าสูงสุดทั้งตาราง
+  let cR=R,pR=R;
+  try{if(S&&S.A&&isFinite(S.A.px)){const g=S.A.px+BASIS,up=R.filter(r=>r[0]>=g),dn=R.filter(r=>r[0]<=g);
+    if(up.some(r=>cv(r)>0))cR=up;if(dn.some(r=>pv(r)>0))pR=dn}}catch(e){}
+  const cw=cR.reduce((a,r)=>cv(r)>cv(a)?r:a,cR[0]),pw=pR.reduce((a,r)=>pv(r)>pv(a)?r:a,pR[0]);
   const vws=f=>{const s=R.reduce((a,r)=>a+f(r),0);return s?R.reduce((a,r)=>a+r[0]*f(r),0)/s:null};
   return{tc,tp,pc:tc?tp/tc:null,cw,pw,cwV:cv(cw),pwV:pv(pw),cV:vws(cv),pV:vws(pv)};
 }
@@ -990,7 +995,7 @@ function renderOpt_(){
   $('#optRows').innerHTML=OPT.rows.slice().sort((a,b)=>b[0]-a[0]).map(r=>{
     const k=r[0],c=cv(r),p=pv(r),sig=p>c?'<span class="up">BUY</span>':c>p?'<span class="dn">SELL</span>':'<span class="mut">—</span>';
     return `<tr class="${k===near?'atm':''}"><td class="n">${k}${k===near?' ◂':''}</td>
-      <td><div class="ob" style="width:${Math.max(25,(c+p)/mx*100)}%"><i class="c" style="width:${c/(c+p||1)*100}%"></i><i class="p" style="width:${p/(c+p||1)*100}%"></i></div><span class="mut n" style="font-size:11px">Vol C ${r[1]} · P ${r[2]}${(r[3]||r[4])?` &nbsp;|&nbsp; OI C ${r[3]||0} · P ${r[4]||0}`:''}</span></td>
+      <td><div class="ob" style="width:${Math.max(8,Math.sqrt((c+p)/mx)*100)}%;min-width:36px"><i class="c" style="width:${c/(c+p||1)*100}%"></i><i class="p" style="width:${p/(c+p||1)*100}%"></i></div><span class="mut n" style="font-size:11px">Vol C ${r[1]} · P ${r[2]}${(r[3]||r[4])?` &nbsp;|&nbsp; OI C ${r[3]||0} · P ${r[4]||0}`:''}</span></td>
       <td class="r">${sig}</td></tr>`}).join('');
   // plan around round levels
   if(pxGC!=null){
