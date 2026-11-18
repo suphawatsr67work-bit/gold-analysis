@@ -181,6 +181,14 @@ i.id.h{background:var(--dn)} i.id.m{background:var(--warn)} i.id.l{background:#7
 .hdr .clk{flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px 16px;flex:1 1 auto;min-width:0}
 .hdr .clk .t{font-size:18px}
 .hdr .clk .ss{align-self:center}
+.ck{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:0 0 10px;background:rgba(255,255,255,.02)}
+.ck summary{cursor:pointer;font-size:13px;color:var(--gold);list-style:none}
+.ck summary::-webkit-details-marker{display:none}
+.ck .ckH{font-size:12px;margin:6px 0 2px}.ck .ckH.warn{color:#f0b429}
+.ckR{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;padding:6px 0;border-top:1px solid var(--line);font-size:13px;align-items:baseline}
+.ckR .mut{grid-column:1/-1;font-size:12px}
+.ckR span{text-align:right}
+.ckR.ok span{color:#2ecc8f}.ckR.due span{color:#f0b429;font-weight:600}.ckR.skip span,.ckR.wait span{color:var(--mut)}
 .hSet{margin:0;font-size:12px;color:var(--mut)}
 .hSet summary{cursor:pointer;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);list-style:none;white-space:nowrap}
 .hSet summary::-webkit-details-marker{display:none}
@@ -414,6 +422,10 @@ i.vd.u{background:var(--up)} i.vd.d{background:var(--dn)}
           <div class="omode" id="optExpRow" style="display:none"><span class="mut">วันหมดอายุ:</span><select id="optExp" style="background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font:inherit"></select></div>
           <div class="note" id="optMeta" style="margin:0 0 8px"></div>
           <div id="cloudMsg" class="mut" style="font-size:12px;margin:-4px 0 8px"></div>
+          <details class="ck" id="ckD" open><summary>⏰ เช็คลิสอ่านข้อมูล Options วันนี้ <span class="mut" id="ckSum"></span></summary>
+            <div id="ckBody"></div>
+            <div class="note" style="margin:6px 0 0">นับวันใหม่ตอน 07:30 (เวลาไทย) · ติ๊กให้เองเมื่อมีการอ่านข้อมูลในช่วงนั้น (ช่วงของ 14:00 เริ่ม 13:00, ช่วงของ 19:45 เริ่ม 18:45) · อิงเวลามาตรฐานของสหรัฐฯ ฤดูร้อนเลื่อนเข้ามา 1 ชั่วโมง · เป็นแนวทาง ไม่ใช่สัญญาณซื้อขาย</div>
+          </details>
           <div class="plan" id="optKpi"></div>
 
           <h3 style="margin-top:12px">แผนตามกฎเลขกลม 00/50</h3>
@@ -1114,6 +1126,7 @@ function fmtAsof(tMs){
   return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth()+1)}/${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} (เวลาไทย)`}
 function lastOptT(){try{return +localStorage.getItem('goldOptT')||0}catch(e){return 0}}
 function applyOptRows(rows,tMs,note,exp){
+  try{ckAdd(tMs||Date.now())}catch(e){}
   OPT={asof:fmtAsof(tMs),exp:exp||'ตามที่วางล่าสุด',fut:OPT.fut,rows};
   try{localStorage.setItem('goldOpt',JSON.stringify(OPT));localStorage.setItem('goldOptT',String(tMs||Date.now()))}catch(e){}
   setOmode(OMODE,true);
@@ -1146,7 +1159,7 @@ function applyChosen(force){
     if(OPTG.t>lastOptT()){OPT.asof=fmtAsof(OPTG.t);try{localStorage.setItem('goldOpt',JSON.stringify(OPT));localStorage.setItem('goldOptT',String(OPTG.t))}catch(e){}renderOpt()}
     return 'same'}
   applyOptRows(r,OPTG.t,' · อัตโนมัติจากสคริปต์',exp);return 'ok'}
-window.__applyOptGroups=(groups,tMs)=>{try{OPTG={groups,t:tMs||Date.now()};renderExpSel();return applyChosen(false)}catch(e){return 'err:'+e.message}};
+window.__applyOptGroups=(groups,tMs)=>{try{ckAdd(tMs||Date.now());OPTG={groups,t:tMs||Date.now()};renderExpSel();const r=applyChosen(false);renderCk();return r}catch(e){return 'err:'+e.message}};
 const BM_CODE="javascript:(function(){var f=function(e){return(e.innerText||'').split('\\n')[0].trim()},n=function(c){var x=f(c).replace(/[,\\s]/g,'');return/^\\d+$/.test(x)?+x:0};var trs=[].slice.call(document.querySelectorAll('tr')),m=null,i,H,si,idx,v,o;for(i=0;i<trs.length&&!m;i++){H=[].slice.call(trs[i].children).map(f);si=H.findIndex(function(x){return/\\u0e43\\u0e0a\\u0e49\\u0e2a\\u0e34\\u0e17\\u0e18\\u0e34|^strike/i.test(x)});if(si<0||H.length<5)continue;idx=function(re){return H.map(function(x,k){return re.test(x)?k:-1}).filter(function(k){return k>=0})};v=idx(/^\\u0e1b\\u0e23\\u0e34\\u0e21\\u0e32\\u0e13|^vol/i);o=idx(/^open\\s*int|^oi$/i);var cv=v.filter(function(k){return k<si}).pop(),pv=v.find(function(k){return k>si});if(cv!==undefined&&pv!==undefined)m={s:si,cv:cv,pv:pv,co:o.filter(function(k){return k<si}).pop(),po:o.find(function(k){return k>si})}}if(!m)m={s:8,cv:6,pv:10,co:7,po:9};var need=Math.max(m.s,m.cv,m.pv,m.co||0,m.po||0),G=[],cur=null,lab='';trs.forEach(function(r){var ch=r.children,d=ch.length>need&&/^[\\d,]{4,6}$/.test((ch[m.s].innerText||'').trim());if(d){if(!cur){cur={label:lab,rows:[]};G.push(cur)}cur.rows.push([n(ch[m.s]),n(ch[m.cv]),n(ch[m.pv]),m.co===undefined?0:n(ch[m.co]),m.po===undefined?0:n(ch[m.po])])}else{var tx=(r.innerText||'').replace(/\\s+/g,' ').trim();if(/\\bDTE\\b/i.test(tx)&&tx.length<80){lab=tx;cur=null}}});G=G.filter(function(g){return g.rows.length>=3});if(!G.length){alert('\\u0e2d\\u0e48\\u0e32\\u0e19\\u0e15\\u0e32\\u0e23\\u0e32\\u0e07\\u0e44\\u0e21\\u0e48\\u0e44\\u0e14\\u0e49 \\u2014 \\u0e43\\u0e0a\\u0e49\\u0e41\\u0e17\\u0e47\\u0e1a Chain \\u0e43\\u0e2b\\u0e49\\u0e15\\u0e32\\u0e23\\u0e32\\u0e07\\u0e42\\u0e2b\\u0e25\\u0e14\\u0e04\\u0e23\\u0e1a (\\u0e16\\u0e49\\u0e32\\u0e40\\u0e1b\\u0e47\\u0e19 iPhone \\u0e43\\u0e2b\\u0e49\\u0e40\\u0e25\\u0e37\\u0e2d\\u0e01 Request Desktop Website \\u0e01\\u0e48\\u0e2d\\u0e19)');return}var j=JSON.stringify({t:Date.now(),groups:G}),b=btoa(unescape(encodeURIComponent(j))).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');location.href='https://suphawatsr67work-bit.github.io/gold-analysis/'+String.fromCharCode(35)+'opt='+b})();";
 $('#bmCopy').onclick=async()=>{const m=$('#bmMsg');try{await navigator.clipboard.writeText(BM_CODE);m.textContent=' คัดลอกแล้ว'}catch(e){
   const ta=document.createElement('textarea');ta.value=BM_CODE;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');m.textContent=' คัดลอกแล้ว'}catch(x){m.textContent=' คัดลอกไม่ได้ — กดค้างที่ช่องแล้วเลือกคัดลอก'}ta.remove()}};
@@ -1162,6 +1175,35 @@ function importHash(){
       const d=$('#optCard');if(d&&d.scrollIntoView)d.scrollIntoView({block:'start'});return r}
   }catch(e){const m=$('#optMsg');if(m)m.textContent='อ่านข้อมูลจากบุ๊กมาร์กไม่ได้: '+e.message}
 }
+// ===== เช็คลิสเวลาอ่านข้อมูล =====
+const CK_SLOTS=[{t:'08:30',l:'เช้า',d:'ได้ OI ใหม่ ใช้วางแผนภาพรวม · Volume ยังน้อย อย่าเชื่อมาก'},{t:'14:00',l:'ก่อนตลาดลอนดอน',d:'Volume เริ่มสะสม'},{t:'19:45',l:'ก่อนตลาดนิวยอร์ก',d:'ช่วงสำคัญที่สุด'}];
+const CK_START=[0,330,675,1440];
+const ckInfo=t=>{const x=t-30*60e3,d=Math.floor(x/864e5);return{d,o:(x-d*864e5)/6e4}};
+const ckLog=()=>{try{return JSON.parse(localStorage.getItem('goldOptLog')||'[]')}catch(e){return[]}};
+function ckAdd(t){if(!t)return;try{let a=ckLog();if(!a.includes(t)){a.push(t);const cut=Date.now()-4*864e5;a=a.filter(x=>x>cut).sort((p,q)=>p-q).slice(-60);localStorage.setItem('goldOptLog',JSON.stringify(a))}}catch(e){}}
+const hmTh=t=>{const d=new Date(t+7*3600e3),p=n=>String(n).padStart(2,'0');return p(d.getUTCHours())+':'+p(d.getUTCMinutes())};
+function renderCk(){
+  const el=$('#ckBody');if(!el)return;
+  const now=Date.now(),n=ckInfo(now),a=ckLog();
+  let done=0,due=0;
+  const rows=CK_SLOTS.map((s,i)=>{
+    const hit=a.filter(t=>{const q=ckInfo(t);return q.d===n.d&&q.o>=CK_START[i]&&q.o<CK_START[i+1]});
+    let st,cls;
+    if(hit.length){st='✓ อ่านแล้ว '+hmTh(hit[hit.length-1]);cls='ok';done++}
+    else if(n.o>=CK_START[i+1]){st='ข้าม';cls='skip'}
+    else if(n.o>=CK_START[i]){st='⏰ ถึงเวลา — กดอ่าน';cls='due';due++}
+    else{st='ยังไม่ถึงเวลา';cls='wait'}
+    return '<div class="ckR '+cls+'"><b>'+s.t+'</b><span style="text-align:left">'+s.l+'</span><span>'+st+'</span><div class="mut">'+s.d+'</div></div>';
+  }).join('');
+  const lt=lastOptT(),age=lt?now-lt:0,ah=Math.floor(age/36e5),am=Math.floor(age/6e4)%60;
+  const fresh=!lt?'ยังไม่เคยอ่านข้อมูลจริง (ใช้ข้อมูลตัวอย่างอยู่)':'ข้อมูลล่าสุด '+hmTh(lt)+' · เมื่อ '+(ah?ah+' ชม. ':'')+am+' น. ที่แล้ว';
+  const stale=!lt||age>3*36e5;
+  const nw=document.getElementById('nws'),nt=nw&&nw.textContent.trim();
+  el.innerHTML='<div class="ckH'+(stale?' warn':'')+'">'+fresh+(stale&&lt?' — เก่าเกิน 3 ชม. ถ้าตลาดกำลังเคลื่อนไหว ควรอ่านใหม่':'')+'</div>'+rows
+    +(nt?'<div class="ckR wait"><b>ข่าว</b><span style="text-align:left">ก่อนข่าวแรง</span><span></span><div class="mut">'+nt.replace(/&/g,'&amp;').replace(/</g,'&lt;')+' — อ่านข้อมูลก่อนข่าวออกราว 30 นาที</div></div>':'');
+  const sm=$('#ckSum');if(sm)sm.textContent='· '+done+'/'+CK_SLOTS.length+' ครั้ง'+(due?' · ⏰ ถึงเวลาแล้ว':'');
+}
+setTimeout(renderCk,1500);setInterval(renderCk,60000);
 // ===== ซิงก์ขึ้น GitHub (branch data / options.json) =====
 const CLOUD={repo:'suphawatsr67work-bit/gold-analysis',br:'data',path:'options.json'};
 const cTok=()=>{try{return localStorage.getItem('goldTok')||''}catch(e){return ''}};
