@@ -418,7 +418,8 @@ i.vd.u{background:var(--up)} i.vd.d{background:var(--dn)}
           <details open class="optD" id="optTblD"><summary>ตารางรายสไตรก์ (Call ▮ Put) · <span id="omName">Volume</span></summary><div class="optTbl"><table class="opt" style="margin-top:8px"><thead><tr><th>Strike</th><th>Call ▮ Put (<span class="omName">Volume</span>)</th><th class="r">กฎ P/C</th></tr></thead><tbody id="optRows"></tbody></table></div></details>
           <div class="note">กฎ (ตามเกณฑ์ที่เลือก): Put &gt; Call ที่ Strike = BUY (แนวรับ) · Call &gt; Put = SELL (แนวต้าน) · ดูในรัศมี ±10 จุดรอบเลขกลม · SL 25 จุด · RR 1:2</div>
           <div class="ctl mut" style="margin-top:8px;font-size:12px">ส่วนต่าง GC − ราคาบนกราฟ <input type="number" id="basis" step="0.1" value="0"> จุด · ซิงค์จากราคา GC ตอนนี้ <input type="number" id="gcpx" step="0.1" placeholder="เช่น 3865.3" style="width:95px"><button id="gcGo">ซิงค์</button></div>
-          <details><summary>อัปเดตข้อมูล Options (วางข้อมูลใหม่)</summary>
+          <details><summary>อัปเดตข้อมูล Options (อัตโนมัติด้วยสคริปต์ หรือวางเอง)</summary>
+            <div class="note" style="margin:6px 0">อัตโนมัติ: ติดตั้ง <a href="gold-options-sync.user.js" style="color:var(--gold,#e6b94c)">gold-options-sync.user.js</a> ใน Tampermonkey แล้วเปิดหน้า Options ของ TradingView ค้างไว้ ข้อมูลจะเข้าที่นี่เอง · หรือทำเองตามขั้นตอนด้านล่าง</div>
             <div style="margin-top:6px">1) เปิดหน้า Options Chain ของ GC1! บน TradingView &nbsp;2) กด F12 → Console แล้ววางโค้ดนี้ (จะคัดลอกผลให้อัตโนมัติ) &nbsp;3) วางผลลงช่องนี้แล้วกด "ใช้ข้อมูล":</div>
             <code class="sn" id="snip"></code>
             <textarea id="optIn" placeholder='วาง JSON หรือบรรทัดละ "strike callVol putVol" เช่น&#10;3860 101 159&#10;3865 64 40'></textarea>
@@ -1098,13 +1099,21 @@ $('#snip').textContent=SNIP;
 $('#refGo').onclick=()=>{const ref=+$('#ref').value;if(!ref||!S.cs.length)return;const raw=S.cs[S.cs.length-1].close-OFF;OFF=Math.round((ref-raw)*100)/100;$('#off').value=OFF;try{localStorage.setItem('goldOff',OFF)}catch(x){}load()};
 $('#gcGo').onclick=()=>{const gc=+$('#gcpx').value;if(!gc||!S.A)return;BASIS=Math.round((gc-S.A.px)*100)/100;try{localStorage.setItem('goldBasis',BASIS)}catch(x){}refreshAutoOrd();drawLines();renderOpt();renderOrd()};
 $('#basis').onchange=e=>{BASIS=+e.target.value||0;try{localStorage.setItem('goldBasis',BASIS)}catch(x){}refreshAutoOrd();drawLines();renderOpt();renderOrd()};
-$('#optApply').onclick=()=>{setTimeout(()=>setOmode(OMODE,true),0);
-  try{const rows=parseOpt($('#optIn').value);
-    const d=new Date(Date.now()+7*3600e3),pad=n=>String(n).padStart(2,'0');
-    OPT={asof:`${pad(d.getUTCDate())}/${pad(d.getUTCMonth()+1)}/${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} (เวลาไทย)`,exp:'ตามที่วางล่าสุด',fut:OPT.fut,rows};
-    try{localStorage.setItem('goldOpt',JSON.stringify(OPT))}catch(e){}
-    $('#optMsg').textContent=`ใช้ข้อมูล ${rows.length} Strike แล้ว`;if(S.A)wlAdd();refreshAutoOrd();drawLines();renderOpt();renderOrd();
-  }catch(e){$('#optMsg').textContent='ผิดพลาด: '+e.message}};
+function applyOptRows(rows,tMs,note){
+  const d=new Date((tMs||Date.now())+7*3600e3),pad=n=>String(n).padStart(2,'0');
+  OPT={asof:`${pad(d.getUTCDate())}/${pad(d.getUTCMonth()+1)}/${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} (เวลาไทย)`,exp:'ตามที่วางล่าสุด',fut:OPT.fut,rows};
+  try{localStorage.setItem('goldOpt',JSON.stringify(OPT))}catch(e){}
+  setOmode(OMODE,true);
+  $('#optMsg').textContent=`ใช้ข้อมูล ${rows.length} Strike แล้ว${note||''}`;if(S.A)wlAdd();refreshAutoOrd();drawLines();renderOpt();renderOrd();
+}
+$('#optApply').onclick=()=>{
+  try{applyOptRows(parseOpt($('#optIn').value),Date.now())}catch(e){$('#optMsg').textContent='ผิดพลาด: '+e.message}};
+// ให้สคริปต์ Tampermonkey (gold-options-sync.user.js) ส่งข้อมูลเข้ามาอัตโนมัติ
+window.__applyOpt=(rows,tMs)=>{try{
+  const r=parseOpt(JSON.stringify(rows));
+  const same=OPT&&OPT.rows&&JSON.stringify(OPT.rows)===JSON.stringify(r);
+  if(same)return 'same';
+  applyOptRows(r,tMs||Date.now(),' · อัตโนมัติจากสคริปต์');return 'ok'}catch(e){return 'err:'+e.message}};
 function setOmode(m,init){
   OMODE=m;if(!init){try{localStorage.setItem('goldOmode',m)}catch(e){}}
   document.querySelectorAll('#omode button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
