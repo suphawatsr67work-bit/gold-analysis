@@ -419,9 +419,12 @@ i.vd.u{background:var(--up)} i.vd.d{background:var(--dn)}
           <details open class="optD" id="optTblD"><summary>ตารางรายสไตรก์ (Call ▮ Put) · <span id="omName">Volume</span></summary><div class="optTbl"><table class="opt" style="margin-top:8px"><thead><tr><th>Strike</th><th>Call ▮ Put (<span class="omName">Volume</span>)</th><th class="r">กฎ P/C</th></tr></thead><tbody id="optRows"></tbody></table></div></details>
           <div class="note">กฎ (ตามเกณฑ์ที่เลือก): Put &gt; Call ที่ Strike = BUY (แนวรับ) · Call &gt; Put = SELL (แนวต้าน) · ดูในรัศมี ±10 จุดรอบเลขกลม · SL 25 จุด · RR 1:2</div>
           <div class="ctl mut" style="margin-top:8px;font-size:12px">ส่วนต่าง GC − ราคาบนกราฟ <input type="number" id="basis" step="0.1" value="0"> จุด · ซิงค์จากราคา GC ตอนนี้ <input type="number" id="gcpx" step="0.1" placeholder="เช่น 3865.3" style="width:95px"><button id="gcGo">ซิงค์</button></div>
+          <div id="cloudMsg" class="mut" style="font-size:12px;margin-top:8px"></div>
           <details id="bmD"><summary>📱 มือถือ (iPhone/Android): ปุ่มลัดอ่านข้อมูลจาก TradingView</summary>
             <div class="note" style="margin:6px 0">ครั้งเดียว: ① กด "คัดลอกโค้ด" ② ใน Safari เพิ่มบุ๊กมาร์กหน้านี้ (แชร์ → เพิ่มบุ๊กมาร์ก) ตั้งชื่อว่า "อ่าน Options" ③ เปิดบุ๊กมาร์ก → แก้ไข → แทนที่ช่องที่อยู่ (URL) ด้วยโค้ดที่คัดลอก<br>ใช้งาน: เปิดหน้า <b>TradingView → Options → Chain</b> (iPhone: กด aA → Request Desktop Website ก่อน) รอตารางโหลด แล้วเปิดบุ๊กมาร์ก "อ่าน Options" จะเด้งมาที่เว็บนี้พร้อมข้อมูลใหม่</div>
             <div class="ctl"><button id="bmCopy">คัดลอกโค้ดบุ๊กมาร์ก</button><span id="bmMsg" class="mut"></span></div>
+            <div class="note" style="margin:10px 0 4px"><b>☁ ให้ทุกคนที่เปิดเว็บเห็นข้อมูลเดียวกัน (ไม่บังคับ)</b><br>ใส่ GitHub token (สิทธิ์ Contents: Read and write เฉพาะ repo นี้) ไว้ที่เครื่องนี้ครั้งเดียว เมื่อกด "อ่าน Options" ข้อมูลจะถูกเขียนทับไฟล์ <code>options.json</code> (branch data) และคนอื่นจะเห็นภายในราว 5 นาที ไม่มี token = เก็บไว้เฉพาะเครื่องนี้</div>
+            <div class="ctl"><input type="password" id="tokIn" placeholder="github_pat_…" autocomplete="off" style="width:190px"><button id="tokSave">บันทึก token</button><button id="tokClear">ลบ</button><span id="tokMsg" class="mut"></span></div>
           </details>
           <details><summary>อัปเดตข้อมูล Options (อัตโนมัติด้วยสคริปต์ หรือวางเอง)</summary>
             <div class="note" style="margin:6px 0">อัตโนมัติ: ติดตั้ง <a href="gold-options-sync.user.js" style="color:var(--gold,#e6b94c)">gold-options-sync.user.js</a> ใน Tampermonkey แล้วเปิดหน้า Options ของ TradingView ค้างไว้ ข้อมูลจะเข้าที่นี่เอง · หรือทำเองตามขั้นตอนด้านล่าง</div>
@@ -1152,11 +1155,49 @@ function importHash(){
     let b=h.slice(5).replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';
     const j=JSON.parse(decodeURIComponent(escape(atob(b))));
     history.replaceState(null,'',location.pathname+location.search);
-    if(j&&j.groups&&j.groups.length){const r=window.__applyOptGroups(j.groups,j.t||Date.now());
+    if(j&&j.groups&&j.groups.length){const tt=j.t||Date.now();const r=window.__applyOptGroups(j.groups,tt);pushCloud(j.groups,tt);
       const m=$('#optMsg');if(m)m.textContent=(m.textContent||'').replace(' · อัตโนมัติจากสคริปต์',' · จากบุ๊กมาร์ก');
       const d=$('#optCard');if(d&&d.scrollIntoView)d.scrollIntoView({block:'start'});return r}
   }catch(e){const m=$('#optMsg');if(m)m.textContent='อ่านข้อมูลจากบุ๊กมาร์กไม่ได้: '+e.message}
 }
+// ===== ซิงก์ขึ้น GitHub (branch data / options.json) =====
+const CLOUD={repo:'suphawatsr67work-bit/gold-analysis',br:'data',path:'options.json'};
+const cTok=()=>{try{return localStorage.getItem('goldTok')||''}catch(e){return ''}};
+const cMsg=t=>{const m=$('#cloudMsg');if(m)m.textContent=t};
+const hhmm=()=>new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+async function pushCloud(groups,t){
+  const T=cTok();if(!T){cMsg('☁ ยังไม่ได้ตั้ง token — ข้อมูลอัปเดตเฉพาะเครื่องนี้ (ตั้งได้ในส่วน "📱 มือถือ")');return 'no-token'}
+  cMsg('☁ กำลังส่งข้อมูลขึ้นคลาวด์…');
+  try{
+    const api='https://api.github.com/repos/'+CLOUD.repo+'/contents/'+CLOUD.path;
+    const H={Authorization:'Bearer '+T,Accept:'application/vnd.github+json'};
+    const g=await fetch(api+'?ref='+CLOUD.br,{headers:H,cache:'no-store'});
+    let sha;
+    if(g.ok){sha=(await g.json()).sha}else if(g.status!==404){throw new Error('อ่านไฟล์เดิมไม่ได้ ('+g.status+')')}
+    const body=JSON.stringify({t,groups});
+    const put=await fetch(api,{method:'PUT',headers:Object.assign({'Content-Type':'application/json'},H),
+      body:JSON.stringify({message:'options '+new Date(t).toISOString(),content:btoa(unescape(encodeURIComponent(body))),sha,branch:CLOUD.br})});
+    if(!put.ok)throw new Error(put.status===401||put.status===403?'token ใช้ไม่ได้/สิทธิ์ไม่พอ ('+put.status+')':'เขียนไฟล์ไม่สำเร็จ ('+put.status+')');
+    cMsg('☁ ส่งขึ้นคลาวด์แล้ว '+hhmm()+' · คนอื่นจะเห็นภายในราว 5 นาที');return 'ok';
+  }catch(e){cMsg('☁ ส่งขึ้นคลาวด์ไม่สำเร็จ: '+e.message+' (ข้อมูลบนเครื่องนี้อัปเดตแล้ว)');return 'err'}
+}
+let cloudLast=0;
+async function pullCloud(){
+  if(document.hidden)return;
+  try{
+    const u='https://raw.githubusercontent.com/'+CLOUD.repo+'/'+CLOUD.br+'/'+CLOUD.path+'?_='+Math.floor(Date.now()/300000);
+    const r=await fetch(u);if(!r.ok)return;
+    const j=await r.json();
+    if(j&&j.groups&&j.groups.length&&j.t>lastOptT()){window.__applyOptGroups(j.groups,j.t);cMsg('☁ ใช้ข้อมูลจากคลาวด์ (อ่านเมื่อ '+fmtAsof(j.t)+')')}
+    else if(j&&j.t){cloudLast=j.t;cMsg('☁ ข้อมูลบนคลาวด์: '+fmtAsof(j.t))}
+  }catch(e){}
+}
+$('#tokSave').onclick=()=>{const v=$('#tokIn').value.trim(),m=$('#tokMsg');if(!v){m.textContent=' ใส่ token ก่อน';return}
+  try{localStorage.setItem('goldTok',v);$('#tokIn').value='';m.textContent=' บันทึกแล้ว (เก็บไว้เฉพาะเครื่องนี้)'}catch(e){m.textContent=' บันทึกไม่ได้'}};
+$('#tokClear').onclick=()=>{try{localStorage.removeItem('goldTok')}catch(e){}$('#tokMsg').textContent=' ลบแล้ว'};
+(function(){const m=$('#tokMsg');if(m&&cTok())m.textContent=' ตั้ง token ไว้แล้ว'})();
+if(!(location.hash||'').startsWith('#opt='))setTimeout(pullCloud,1500);
+setInterval(pullCloud,300000);
 setTimeout(importHash,2000);
 window.__applyOpt=(rows,tMs)=>{try{
   const r=parseOpt(JSON.stringify(rows));
