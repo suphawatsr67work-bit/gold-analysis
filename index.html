@@ -249,8 +249,8 @@ i.id.h{background:var(--dn)} i.id.m{background:var(--warn)} i.id.l{background:#7
   .hdr{padding:8px 10px}
   .hdr .clk{gap:4px 10px}
   .hdr .clk .t{font-size:16px}
-  .hSet{flex:1 1 100%}
-  .hSet summary{display:block;text-align:center;min-height:34px;padding-top:6px}
+  .hSet{flex:1 1 100%;min-width:0;max-width:100%}
+  .hSet summary{display:block;text-align:center;min-height:34px;padding-top:6px;white-space:normal;overflow-wrap:anywhere}
   .hsBody{flex-direction:column;align-items:stretch}
   .hsBody select,.hsBody button{width:100%}
   .chartBar{flex-direction:column;align-items:stretch;gap:8px}
@@ -818,7 +818,7 @@ function drawLines(){
     A.sup.forEach((p,k)=>add(p,'#2ebd85',`S${k+1}`,2));
   }
   if($('#tOpt').checked&&OPT.rows.length){const st=optStats();
-    add(st.cw[0]-BASIS,'#4c9be8','Call Wall '+st.cw[0],0);add(st.pw[0]-BASIS,'#ff7a8a','Put Wall '+st.pw[0],0);}
+    if(st.cwV>0)add(st.cw[0]-BASIS,'#4c9be8','Call Wall '+st.cw[0],0);if(st.pwV>0)add(st.pw[0]-BASIS,'#ff7a8a','Put Wall '+st.pw[0],0);}
   if($('#tRound').checked){
     [...A.roundUp.slice(0,2),...A.roundDn.slice(0,2)].forEach(p=>add(p,'#e8b84a99',String(p),1));
   }
@@ -962,7 +962,9 @@ function optStats(){
   let cR=R,pR=R;
   try{if(S&&S.A&&isFinite(S.A.px)){const g=S.A.px+BASIS,up=R.filter(r=>r[0]>=g),dn=R.filter(r=>r[0]<=g);
     if(up.some(r=>cv(r)>0))cR=up;if(dn.some(r=>pv(r)>0))pR=dn}}catch(e){}
-  const cw=cR.reduce((a,r)=>cv(r)>cv(a)?r:a,cR[0]),pw=pR.reduce((a,r)=>pv(r)>pv(a)?r:a,pR[0]);
+  let gp=null;try{if(S&&S.A&&isFinite(S.A.px))gp=S.A.px+BASIS}catch(e){}
+  const nr=r=>gp==null?0:Math.abs(r[0]-gp); // เท่ากัน → เลือกสไตรก์ที่ใกล้ราคามากกว่า
+  const cw=cR.reduce((a,r)=>cv(r)>cv(a)||(cv(r)===cv(a)&&nr(r)<nr(a))?r:a,cR[0]),pw=pR.reduce((a,r)=>pv(r)>pv(a)||(pv(r)===pv(a)&&nr(r)<nr(a))?r:a,pR[0]);
   const vws=f=>{const s=R.reduce((a,r)=>a+f(r),0);return s?R.reduce((a,r)=>a+r[0]*f(r),0)/s:null};
   return{tc,tp,pc:tc?tp/tc:null,cw,pw,cwV:cv(cw),pwV:pv(pw),cV:vws(cv),pV:vws(pv)};
 }
@@ -988,7 +990,7 @@ function renderOpt_(){
     `<div><small>Call ${on} รวม</small><b style="color:#4c9be8">${st.tc.toLocaleString()}</b></div>
      <div><small>Put ${on} รวม</small><b class="dn">${st.tp.toLocaleString()}</b></div>
      <div><small>Put/Call Ratio</small><b class="${st.pc>1?'up':st.pc<1?'dn':''}">${st.pc==null?'--':st.pc.toFixed(2)}</b><small>${st.pc>1?'Put เด่น → เอนเอียง BUY':st.pc<1?'Call เด่น → เอนเอียง SELL':'เท่ากัน'}</small></div>
-     <div><small>Call Wall / Put Wall</small><b><span style="color:#4c9be8">${st.cw[0]}</span> / <span class="dn">${st.pw[0]}</span></b><small>${on} ${st.cwV.toLocaleString()} / ${st.pwV.toLocaleString()}</small></div>
+     <div><small>Call Wall / Put Wall</small><b><span style="color:#4c9be8">${st.cwV>0?st.cw[0]:'—'}</span> / <span class="dn">${st.pwV>0?st.pw[0]:'—'}</span></b><small>${on} ${st.cwV.toLocaleString()} / ${st.pwV.toLocaleString()}</small></div>
      <div><small>ศูนย์ถ่วง Call</small><b>${st.cV?f2(st.cV):'--'}</b></div>
      <div><small>ศูนย์ถ่วง Put</small><b>${st.pV?f2(st.pV):'--'}</b></div>`;
   let near=null;if(pxGC!=null)near=OPT.rows.reduce((a,r)=>Math.abs(r[0]-pxGC)<Math.abs(a[0]-pxGC)?r:a,OPT.rows[0])[0];
@@ -1045,6 +1047,18 @@ function ordAdd(){ // price lines + shaded zones on the main chart
     add(o.sl,'#f6465d',o.side+' SL',2,1);add(o.tp,'#2ebd85',o.side+' TP',2,1);
   });
 }
+// จำลองสถานะออเดอร์จากแท่งเทียนตั้งแต่ตั้งออเดอร์: รอเข้า → เข้าแล้ว → ชน TP/SL (แท่งที่เข้า Entry ยังไม่ตัดสิน SL/TP)
+function ordSim(o){
+  const cs=S.cs;if(!cs||!cs.length||!isFinite(o.entry))return null;
+  const t0=ORD.t0||cs[cs.length-1].time,buy=o.side==='BUY';let filled=false;
+  for(const c of cs){
+    if(c.time<t0)continue;
+    if(!filled){if(c.low<=o.entry&&c.high>=o.entry)filled=true;continue}
+    const hs=buy?c.low<=o.sl:c.high>=o.sl,ht=buy?c.high>=o.tp:c.low<=o.tp;
+    if(hs)return 'sl';if(ht)return 'tp';
+  }
+  return filled?'open':'pending';
+}
 function ordBlock(o,px,lot,atr){
   const buy=o.side==='BUY',{entry,sl,tp}=o,mult=100*lot;
   const head=`<span class="badge ${buy?'b-up':'b-dn'}" style="font-size:11px">${o.side}</span> <b>${o.tag||'Entry'}</b> <span class="mut">@ ${f2(entry)}</span>`;
@@ -1053,9 +1067,12 @@ function ordBlock(o,px,lot,atr){
   const risk=Math.abs(entry-sl),rew=Math.abs(tp-entry);let type='',st='--';
   if(px!=null){const d=entry-px;
     type=Math.abs(d)<=Math.max(0.3,(atr||1)*0.05)?'Market':(buy?(d<0?'BUY LIMIT':'BUY STOP'):(d>0?'SELL LIMIT':'SELL STOP'));
-    const hitTp=buy?px>=tp:px<=tp,hitSl=buy?px<=sl:px>=sl,fl=(buy?px-entry:entry-px)*mult;
-    st=hitTp?'<span class="up">ราคาถึง TP แล้ว</span>':hitSl?'<span class="dn">ราคาถึง SL แล้ว</span>':
-      `ห่าง Entry ${f2(Math.abs(d))} จุด · P/L ถ้าเข้าที่ Entry <b class="${fl>=0?'up':'dn'}" style="display:inline;font-size:12px">${fl>=0?'+':''}${f2(fl)} $</b>`;
+    const fl=(buy?px-entry:entry-px)*mult,sim=ordSim(o);
+    const pl=`<b class="${fl>=0?'up':'dn'}" style="display:inline;font-size:12px">${fl>=0?'+':''}${f2(fl)} $</b>`;
+    st=sim==='tp'?'<span class="up">เข้า Entry แล้ว → ชน TP</span>':sim==='sl'?'<span class="dn">เข้า Entry แล้ว → ชน SL</span>':
+      sim==='pending'?`รอเข้า Entry · ราคาห่าง ${f2(Math.abs(d))} จุด (ยังไม่ถึง Entry)`:
+      sim==='open'?`เข้า Entry แล้ว · P/L ตอนนี้ ${pl}`:
+      `ห่าง Entry ${f2(Math.abs(d))} จุด · P/L ถ้าเข้าที่ Entry ${pl}`;
   }
   return `<div style="margin-top:10px">${head} <span class="mut">· ${type}</span>
     <div class="kv">
@@ -1088,6 +1105,7 @@ function renderOrd(){
 function wallOrders(){
   if(!OPT.rows.length)return null;
   const st=optStats(),sl=Math.max(1,+ORD.slPts||25),rr=Math.max(0.5,+ORD.rr||2);
+  if(!(st.cwV>0&&st.pwV>0))return null; // ยังไม่มี Volume/OI ที่ฝั่งใดฝั่งหนึ่ง → ไม่สร้างออเดอร์จากกำแพง
   const pe=+(st.pw[0]-BASIS).toFixed(2),ce=+(st.cw[0]-BASIS).toFixed(2);
   return[{side:'BUY',tag:'Put Wall '+st.pw[0],entry:pe,sl:+(pe-sl).toFixed(2),tp:+(pe+sl*rr).toFixed(2)},
          {side:'SELL',tag:'Call Wall '+st.cw[0],entry:ce,sl:+(ce+sl).toFixed(2),tp:+(ce-sl*rr).toFixed(2)}];
