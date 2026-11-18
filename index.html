@@ -1187,6 +1187,14 @@ const BM_CODE="javascript:(function(){var f=function(e){return(e.innerText||'').
 $('#bmCopy').onclick=async()=>{const m=$('#bmMsg');try{await navigator.clipboard.writeText(BM_CODE);m.textContent=' คัดลอกแล้ว'}catch(e){
   const ta=document.createElement('textarea');ta.value=BM_CODE;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');m.textContent=' คัดลอกแล้ว'}catch(x){m.textContent=' คัดลอกไม่ได้ — กดค้างที่ช่องแล้วเลือกคัดลอก'}ta.remove()}};
 // รับข้อมูลจากบุ๊กมาร์ก: .../gold-analysis/#opt=<base64url JSON {t,groups}>
+// ตั้งส่วนต่าง GC − ราคากราฟ อัตโนมัติจากราคา GC ที่บุ๊กมาร์กอ่านได้ (ใช้เฉพาะเครื่องที่กดอ่านเอง)
+function autoBasis(gc,n){n=n||0;
+  if(!S.A||!isFinite(S.A.px)){if(n<20)setTimeout(()=>autoBasis(gc,n+1),500);return}
+  BASIS=Math.round((gc-S.A.px)*100)/100;try{localStorage.setItem('goldBasis',BASIS)}catch(x){}
+  const g=$('#gcpx');if(g)g.value=gc;
+  try{refreshAutoOrd();drawLines();renderOpt();renderOrd()}catch(e){}
+  const m=$('#optMsg');if(m)m.textContent=(m.textContent||'')+' · ตั้งส่วนต่าง GC−กราฟ = '+(BASIS>0?'+':'')+BASIS.toFixed(2)+' อัตโนมัติ (GC '+gc.toLocaleString('en-US')+')';
+}
 function importHash(){
   const h=location.hash||'';if(!h.startsWith('#opt='))return;
   try{
@@ -1195,6 +1203,7 @@ function importHash(){
     history.replaceState(null,'',location.pathname+location.search);
     if(j&&j.groups&&j.groups.length){const tt=j.t||Date.now();const r=window.__applyOptGroups(j.groups,tt);pushCloud(j.groups,tt);
       const m=$('#optMsg');if(m)m.textContent=(m.textContent||'').replace(' · อัตโนมัติจากสคริปต์',' · จากบุ๊กมาร์ก');
+      if(j.gc>1000&&j.gc<20000&&Date.now()-tt<5*60e3)autoBasis(j.gc);
       const d=$('#optCard');if(d&&d.scrollIntoView)d.scrollIntoView({block:'start'});return r}
   }catch(e){const m=$('#optMsg');if(m)m.textContent='อ่านข้อมูลจากบุ๊กมาร์กไม่ได้: '+e.message}
 }
