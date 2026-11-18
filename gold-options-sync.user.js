@@ -1,7 +1,9 @@
 // ==UserScript==
 // @name         Gold Options Sync (TradingView → gold-analysis)
 // @namespace    https://suphawatsr67work-bit.github.io/gold-analysis/
-// @version      1.0
+// @version      1.1
+// @updateURL    https://suphawatsr67work-bit.github.io/gold-analysis/gold-options-sync.user.js
+// @downloadURL  https://suphawatsr67work-bit.github.io/gold-analysis/gold-options-sync.user.js
 // @description  อ่านตาราง Options Chain (Volume/OI รายสไตรก์) จากหน้า TradingView ที่เปิดอยู่ แล้วส่งให้เว็บ gold-analysis อัปเดตอัตโนมัติ
 // @match        https://*.tradingview.com/options/*
 // @match        https://suphawatsr67work-bit.github.io/gold-analysis/*
@@ -18,15 +20,50 @@
   const onTV = /tradingview\.com$/.test(location.hostname);
 
   /* ---------- ฝั่ง TradingView: อ่านตาราง ---------- */
-  // อ่านเหมือนสคริปต์ copy เดิมของเว็บ: แถวที่มี >= 11 ช่อง, คอลัมน์ 8 = strike, 6 = Call Vol, 10 = Put Vol, 7 = Call OI, 9 = Put OI
-  function readRows() {
-    const n = (r, i) => {
-      const t = r.children[i].innerText.split('\n')[0].replace(/[,\s]/g, '');
-      return /^\d+$/.test(t) ? +t : 0;
-    };
-    return [...document.querySelectorAll('tr')]
-      .filter(r => r.children.length >= 11 && /^[\d,]{4,6}$/.test(r.children[8].innerText.trim()))
-      .map(r => [n(r, 8), n(r, 6), n(r, 10), n(r, 7), n(r, 9)]);
+  // อ่านตารางตามชื่อหัวคอลัมน์ (ใช้สิทธิ/Strike, ปริมาณ/Volume, Open int) ไม่ผูกกับตำแหน่งคอลัมน์ตายตัว
+  // และแยกกลุ่มตามวันหมดอายุ (แถวหัวกลุ่มที่มีคำว่า DTE เช่น "18 พฤศจิกายน 0 DTE G3W")
+  const first = (el) => (el.innerText || '').split('\n')[0].trim();
+  const num = (cell) => {
+    const t = first(cell).replace(/[,\s]/g, '');
+    return /^\d+$/.test(t) ? +t : 0;
+  };
+  let lastMap = '';
+  function detectMap(trs) {
+    for (const tr of trs) {
+      const H = [...tr.children].map(first);
+      const si = H.findIndex(t => /ใช้สิทธิ|^strike/i.test(t));
+      if (si < 0 || H.length < 5) continue;
+      const idx = (re) => H.map((t, i) => (re.test(t) ? i : -1)).filter(i => i >= 0);
+      const vols = idx(/^ปริมาณ|^vol/i), ois = idx(/^open\s*int|^oi$/i);
+      const m = {
+        s: si,
+        cv: vols.filter(i => i < si).pop(), pv: vols.find(i => i > si),
+        co: ois.filter(i => i < si).pop(), po: ois.find(i => i > si),
+      };
+      if (m.cv !== undefined && m.pv !== undefined) return m;
+    }
+    return null;
+  }
+  function readGroups() {
+    const trs = [...document.querySelectorAll('tr')];
+    let m = detectMap(trs), how = 'หัวคอลัมน์';
+    if (!m) { m = { s: 8, cv: 6, pv: 10, co: 7, po: 9 }; how = 'ตำแหน่งเดิม'; }
+    lastMap = how + ' [strike@' + m.s + ' vol@' + m.cv + '/' + m.pv + ' OI@' + m.co + '/' + m.po + ']';
+    const need = Math.max(m.s, m.cv, m.pv, m.co || 0, m.po || 0);
+    const groups = [];
+    let cur = null, label = '';
+    for (const tr of trs) {
+      const ch = tr.children;
+      const isData = ch.length > need && /^[\d,]{4,6}$/.test((ch[m.s].innerText || '').trim());
+      if (isData) {
+        if (!cur) { cur = { label, rows: [] }; groups.push(cur); }
+        cur.rows.push([num(ch[m.s]), num(ch[m.cv]), num(ch[m.pv]), m.co === undefined ? 0 : num(ch[m.co]), m.po === undefined ? 0 : num(ch[m.po])]);
+      } else {
+        const tx = (tr.innerText || '').replace(/\s+/g, ' ').trim();
+        if (/\bDTE\b/i.test(tx) && tx.length < 80) { label = tx; cur = null; }
+      }
+    }
+    return groups.filter(g => g.rows.length >= 3);
   }
 
   function badge(text, ok) {
@@ -44,19 +81,19 @@
   if (onTV) {
     let last = '';
     const tick = () => {
-      let rows = [];
-      try { rows = readRows(); } catch (e) {}
-      if (rows.length < 3) {
-        badge('Gold Sync: ยังอ่านตารางไม่ได้ — เปิดหน้า Options Chain ของ GC1! ให้ตารางโหลดครบ', false);
+      let groups = [];
+      try { groups = readGroups(); } catch (e) {}
+      if (!groups.length) {
+        badge('Gold Sync: ยังอ่านตารางไม่ได้ — ใช้แท็บ Chain และรอให้ตารางโหลดครบ', false);
         return;
       }
-      const j = JSON.stringify(rows);
+      const j = JSON.stringify(groups);
       const hhmm = new Date().toTimeString().slice(0, 5);
       if (j !== last) {
         last = j;
-        GM_setValue(KEY, { t: Date.now(), rows });
+        GM_setValue(KEY, { t: Date.now(), groups });
       }
-      badge('Gold Sync: ส่งข้อมูล ' + rows.length + ' สไตรก์ · ตรวจล่าสุด ' + hhmm, true);
+      badge('Gold Sync: ส่ง ' + groups.length + ' วันหมดอายุ (' + groups.map(g => g.rows.length).join('/') + ' สไตรก์) · ' + hhmm + ' · อ่านจาก' + lastMap, true);
     };
     tick();
     setInterval(tick, EVERY_MS);
@@ -67,11 +104,14 @@
   const w = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
   let applied = '';
   const apply = (v) => {
-    if (!v || !v.rows || !w.__applyOpt) return;
-    const sig = v.t + ':' + v.rows.length;
+    if (!v || !w.__applyOpt) return;
+    const sig = v.t + ':' + (v.groups ? v.groups.length : v.rows && v.rows.length);
     if (sig === applied) return;
     applied = sig;
-    try { w.__applyOpt(JSON.parse(JSON.stringify(v.rows)), v.t); } catch (e) {}
+    try {
+      if (v.groups && w.__applyOptGroups) w.__applyOptGroups(JSON.parse(JSON.stringify(v.groups)), v.t);
+      else if (v.rows) w.__applyOpt(JSON.parse(JSON.stringify(v.rows)), v.t);
+    } catch (e) {}
   };
   const boot = () => apply(GM_getValue(KEY, null));
   // รอให้เว็บโหลดฟังก์ชันรับข้อมูลก่อน

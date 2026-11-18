@@ -410,6 +410,7 @@ i.vd.u{background:var(--up)} i.vd.d{background:var(--dn)}
           <div class="omode" id="omode" role="radiogroup" aria-label="เกณฑ์หากำแพง"><span class="mut">เกณฑ์กำแพง:</span>
             <button data-m="vol" class="on">Volume</button><button data-m="oi">OI</button><button data-m="both">ทั้งสอง (รวมกัน)</button></div>
           <div class="note" id="omHint" style="margin:-2px 0 8px"></div>
+          <div class="omode" id="optExpRow" style="display:none"><span class="mut">วันหมดอายุ:</span><select id="optExp" style="background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font:inherit"></select></div>
           <div class="note" id="optMeta" style="margin:0 0 8px"></div>
           <div class="plan" id="optKpi"></div>
 
@@ -1099,9 +1100,9 @@ $('#snip').textContent=SNIP;
 $('#refGo').onclick=()=>{const ref=+$('#ref').value;if(!ref||!S.cs.length)return;const raw=S.cs[S.cs.length-1].close-OFF;OFF=Math.round((ref-raw)*100)/100;$('#off').value=OFF;try{localStorage.setItem('goldOff',OFF)}catch(x){}load()};
 $('#gcGo').onclick=()=>{const gc=+$('#gcpx').value;if(!gc||!S.A)return;BASIS=Math.round((gc-S.A.px)*100)/100;try{localStorage.setItem('goldBasis',BASIS)}catch(x){}refreshAutoOrd();drawLines();renderOpt();renderOrd()};
 $('#basis').onchange=e=>{BASIS=+e.target.value||0;try{localStorage.setItem('goldBasis',BASIS)}catch(x){}refreshAutoOrd();drawLines();renderOpt();renderOrd()};
-function applyOptRows(rows,tMs,note){
+function applyOptRows(rows,tMs,note,exp){
   const d=new Date((tMs||Date.now())+7*3600e3),pad=n=>String(n).padStart(2,'0');
-  OPT={asof:`${pad(d.getUTCDate())}/${pad(d.getUTCMonth()+1)}/${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} (เวลาไทย)`,exp:'ตามที่วางล่าสุด',fut:OPT.fut,rows};
+  OPT={asof:`${pad(d.getUTCDate())}/${pad(d.getUTCMonth()+1)}/${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} (เวลาไทย)`,exp:exp||'ตามที่วางล่าสุด',fut:OPT.fut,rows};
   try{localStorage.setItem('goldOpt',JSON.stringify(OPT))}catch(e){}
   setOmode(OMODE,true);
   $('#optMsg').textContent=`ใช้ข้อมูล ${rows.length} Strike แล้ว${note||''}`;if(S.A)wlAdd();refreshAutoOrd();drawLines();renderOpt();renderOrd();
@@ -1109,6 +1110,28 @@ function applyOptRows(rows,tMs,note){
 $('#optApply').onclick=()=>{
   try{applyOptRows(parseOpt($('#optIn').value),Date.now())}catch(e){$('#optMsg').textContent='ผิดพลาด: '+e.message}};
 // ให้สคริปต์ Tampermonkey (gold-options-sync.user.js) ส่งข้อมูลเข้ามาอัตโนมัติ
+// ข้อมูลหลายวันหมดอายุ (18/19/20 ...) จากสคริปต์ → เลือกวันจากช่อง "วันหมดอายุ"
+let OPTG=null;
+const expKey=l=>String(l||'').replace(/\s*\d+\s*DTE.*$/i,'').trim();
+function pickGroup(){
+  if(!OPTG||!OPTG.groups.length)return null;
+  let want='';try{want=localStorage.getItem('goldExp')||''}catch(e){}
+  return (want&&OPTG.groups.find(g=>expKey(g.label)===want))||OPTG.groups[0];
+}
+function renderExpSel(){
+  const box=$('#optExpRow'),sel=$('#optExp');if(!box||!sel)return;
+  if(!OPTG||OPTG.groups.length<2){box.style.display='none';return}
+  let want='';try{want=localStorage.getItem('goldExp')||''}catch(e){}
+  sel.innerHTML='<option value="">อัตโนมัติ (ใกล้สุด)</option>'+OPTG.groups.map(g=>`<option value="${expKey(g.label)}">${g.label||'-'}</option>`).join('');
+  sel.value=OPTG.groups.some(g=>expKey(g.label)===want)?want:'';
+  box.style.display='';
+}
+function applyChosen(force){
+  const g=pickGroup();if(!g)return 'none';
+  const r=parseOpt(JSON.stringify(g.rows)),exp=g.label||'ตามที่วางล่าสุด';
+  if(!force&&OPT&&OPT.rows&&OPT.exp===exp&&JSON.stringify(OPT.rows)===JSON.stringify(r))return 'same';
+  applyOptRows(r,OPTG.t,' · อัตโนมัติจากสคริปต์',exp);return 'ok'}
+window.__applyOptGroups=(groups,tMs)=>{try{OPTG={groups,t:tMs||Date.now()};renderExpSel();return applyChosen(false)}catch(e){return 'err:'+e.message}};
 window.__applyOpt=(rows,tMs)=>{try{
   const r=parseOpt(JSON.stringify(rows));
   const same=OPT&&OPT.rows&&JSON.stringify(OPT.rows)===JSON.stringify(r);
@@ -1125,6 +1148,7 @@ function setOmode(m,init){
 }
 document.querySelectorAll('#omode button').forEach(b=>b.onclick=()=>setOmode(b.dataset.m));
 setOmode(OMODE,true);
+$('#optExp').onchange=e=>{try{localStorage.setItem('goldExp',e.target.value)}catch(x){}try{applyChosen(true)}catch(x){}};
 $('#optReset').onclick=()=>{OPT=JSON.parse(JSON.stringify(OPT_DEFAULT));setOmode(OMODE,true);try{localStorage.removeItem('goldOpt')}catch(e){}$('#optMsg').textContent='กลับเป็นค่าเริ่มต้นแล้ว';refreshAutoOrd();drawLines();renderOpt();renderOrd()};
 $('#resetAll').onclick=()=>{
   OFF=9;BASIS=0;S.src='spot';S.tf='1h';
