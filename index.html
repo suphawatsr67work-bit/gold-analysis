@@ -412,6 +412,7 @@ i.vd.u{background:var(--up)} i.vd.d{background:var(--dn)}
           <div class="note" id="omHint" style="margin:-2px 0 8px"></div>
           <div class="omode" id="optExpRow" style="display:none"><span class="mut">วันหมดอายุ:</span><select id="optExp" style="background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font:inherit"></select></div>
           <div class="note" id="optMeta" style="margin:0 0 8px"></div>
+          <div id="cloudMsg" class="mut" style="font-size:12px;margin:-4px 0 8px"></div>
           <div class="plan" id="optKpi"></div>
 
           <h3 style="margin-top:12px">แผนตามกฎเลขกลม 00/50</h3>
@@ -419,7 +420,6 @@ i.vd.u{background:var(--up)} i.vd.d{background:var(--dn)}
           <details open class="optD" id="optTblD"><summary>ตารางรายสไตรก์ (Call ▮ Put) · <span id="omName">Volume</span></summary><div class="optTbl"><table class="opt" style="margin-top:8px"><thead><tr><th>Strike</th><th>Call ▮ Put (<span class="omName">Volume</span>)</th><th class="r">กฎ P/C</th></tr></thead><tbody id="optRows"></tbody></table></div></details>
           <div class="note">กฎ (ตามเกณฑ์ที่เลือก): Put &gt; Call ที่ Strike = BUY (แนวรับ) · Call &gt; Put = SELL (แนวต้าน) · ดูในรัศมี ±10 จุดรอบเลขกลม · SL 25 จุด · RR 1:2</div>
           <div class="ctl mut" style="margin-top:8px;font-size:12px">ส่วนต่าง GC − ราคาบนกราฟ <input type="number" id="basis" step="0.1" value="0"> จุด · ซิงค์จากราคา GC ตอนนี้ <input type="number" id="gcpx" step="0.1" placeholder="เช่น 3865.3" style="width:95px"><button id="gcGo">ซิงค์</button></div>
-          <div id="cloudMsg" class="mut" style="font-size:12px;margin-top:8px"></div>
           <details id="bmD"><summary>📱 มือถือ (iPhone/Android): ปุ่มลัดอ่านข้อมูลจาก TradingView</summary>
             <div class="note" style="margin:6px 0">ครั้งเดียว: ① กด "คัดลอกโค้ด" ② ใน Safari เพิ่มบุ๊กมาร์กหน้านี้ (แชร์ → เพิ่มบุ๊กมาร์ก) ตั้งชื่อว่า "อ่าน Options" ③ เปิดบุ๊กมาร์ก → แก้ไข → แทนที่ช่องที่อยู่ (URL) ด้วยโค้ดที่คัดลอก<br>ใช้งาน: เปิดหน้า <b>TradingView → Options → Chain</b> (iPhone: กด aA → Request Desktop Website ก่อน) รอตารางโหลด แล้วเปิดบุ๊กมาร์ก "อ่าน Options" จะเด้งมาที่เว็บนี้พร้อมข้อมูลใหม่</div>
             <div class="ctl"><button id="bmCopy">คัดลอกโค้ดบุ๊กมาร์ก</button><span id="bmMsg" class="mut"></span></div>
@@ -1174,11 +1174,11 @@ async function pushCloud(groups,t){
     const H={Authorization:'Bearer '+T,Accept:'application/vnd.github+json'};
     const g=await fetch(api+'?ref='+CLOUD.br,{headers:H,cache:'no-store'});
     let sha;
-    if(g.ok){sha=(await g.json()).sha}else if(g.status!==404){throw new Error('อ่านไฟล์เดิมไม่ได้ ('+g.status+')')}
+    if(g.ok){sha=(await g.json()).sha}else if(g.status===401){throw new Error('token ไม่ถูกต้องหรือหมดอายุ (401) — วาง token ใหม่แล้วกดบันทึก')}else if(g.status!==404){throw new Error('อ่านไฟล์เดิมไม่ได้ ('+g.status+')')}
     const body=JSON.stringify({t,groups});
     const put=await fetch(api,{method:'PUT',headers:Object.assign({'Content-Type':'application/json'},H),
       body:JSON.stringify({message:'options '+new Date(t).toISOString(),content:btoa(unescape(encodeURIComponent(body))),sha,branch:CLOUD.br})});
-    if(!put.ok)throw new Error(put.status===401||put.status===403?'token ใช้ไม่ได้/สิทธิ์ไม่พอ ('+put.status+')':'เขียนไฟล์ไม่สำเร็จ ('+put.status+')');
+    if(!put.ok)throw new Error(put.status===401?'token ไม่ถูกต้องหรือหมดอายุ (401) — วาง token ใหม่แล้วกดบันทึก':put.status===403||put.status===404?'token ไม่มีสิทธิ์เขียน repo นี้ ('+put.status+') — ตรวจว่าเลือก repo gold-analysis และ Contents = Read and write':'เขียนไฟล์ไม่สำเร็จ ('+put.status+')');
     cMsg('☁ ส่งขึ้นคลาวด์แล้ว '+hhmm()+' · คนอื่นจะเห็นภายในราว 5 นาที');return 'ok';
   }catch(e){cMsg('☁ ส่งขึ้นคลาวด์ไม่สำเร็จ: '+e.message+' (ข้อมูลบนเครื่องนี้อัปเดตแล้ว)');return 'err'}
 }
@@ -1193,8 +1193,11 @@ async function pullCloud(){
     else if(j&&j.t){cloudLast=j.t;cMsg('☁ ข้อมูลบนคลาวด์: '+fmtAsof(j.t))}
   }catch(e){}
 }
-$('#tokSave').onclick=()=>{const v=$('#tokIn').value.trim(),m=$('#tokMsg');if(!v){m.textContent=' ใส่ token ก่อน';return}
-  try{localStorage.setItem('goldTok',v);$('#tokIn').value='';m.textContent=' บันทึกแล้ว (เก็บไว้เฉพาะเครื่องนี้)'}catch(e){m.textContent=' บันทึกไม่ได้'}};
+const saveTok=()=>{const v=$('#tokIn').value.trim(),m=$('#tokMsg');if(!v){m.textContent=cTok()?' ✓ บันทึกแล้ว — ไปกด "อ่าน Options" ได้เลย':' ใส่ token ก่อน';return}
+  if(!/^(github_pat_|ghp_)[A-Za-z0-9_]{20,}$/.test(v)){m.textContent=' รูปแบบ token ไม่ถูกต้อง (ต้องขึ้นต้นด้วย github_pat_ และไม่มีช่องว่าง)';return}
+  try{localStorage.setItem('goldTok',v);$('#tokIn').value='';m.textContent=' ✓ บันทึกแล้ว (เก็บไว้เฉพาะเครื่องนี้) — ไปกด "อ่าน Options" ได้เลย'}catch(e){m.textContent=' บันทึกไม่ได้'}};
+$('#tokSave').onclick=saveTok;
+$('#tokIn').addEventListener('change',()=>{if($('#tokIn').value.trim())saveTok()});
 $('#tokClear').onclick=()=>{try{localStorage.removeItem('goldTok')}catch(e){}$('#tokMsg').textContent=' ลบแล้ว'};
 (function(){const m=$('#tokMsg');if(m&&cTok())m.textContent=' ตั้ง token ไว้แล้ว'})();
 if(!(location.hash||'').startsWith('#opt='))setTimeout(pullCloud,1500);
