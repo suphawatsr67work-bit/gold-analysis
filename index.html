@@ -940,7 +940,8 @@ function renderOpt(){
 function renderOpt_(){
   if(!OPT.rows.length)return;
   const st=optStats(),px=S.A?S.A.px:null,pxGC=px==null?null:px+BASIS;
-  $('#optMeta').innerHTML=`ข้อมูล ณ ${OPT.asof} · สัญญาหมดอายุ ${OPT.exp} · GC Dec ≈ ${f2(OPT.fut)}<br><span class="warn">เป็น Snapshot ไม่อัปเดตอัตโนมัติ — ตลาดเปลี่ยนเร็ว ให้กด "อัปเดตข้อมูล" ด้านล่างก่อนใช้งาน</span>`;
+  const isSnap=OPT.asof===OPT_DEFAULT.asof;
+  $('#optMeta').innerHTML=`ข้อมูล ณ ${OPT.asof} · สัญญาหมดอายุ ${OPT.exp}${isSnap?' · GC Dec ≈ '+f2(OPT.fut):''}<br><span class="warn">${isSnap?'เป็น Snapshot ไม่อัปเดตอัตโนมัติ — ตลาดเปลี่ยนเร็ว ให้กด "อัปเดตข้อมูล" ด้านล่างก่อนใช้งาน':'ข้อมูลที่อ่านมา ณ เวลาข้างบน (ไม่อัปเดตเอง) — ตลาดเปลี่ยนเร็ว ให้อ่านใหม่ด้วยบุ๊กมาร์กก่อนใช้งาน'}</span>`;
   const mx=Math.max(...OPT.rows.map(r=>cv(r)+pv(r)),1),on=oname();
   $('#optKpi').innerHTML=
     `<div><small>Call ${on} รวม</small><b style="color:#4c9be8">${st.tc.toLocaleString()}</b></div>
