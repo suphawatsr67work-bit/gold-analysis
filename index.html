@@ -181,14 +181,32 @@ i.id.h{background:var(--dn)} i.id.m{background:var(--warn)} i.id.l{background:#7
 .hdr .clk{flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px 16px;flex:1 1 auto;min-width:0}
 .hdr .clk .t{font-size:18px}
 .hdr .clk .ss{align-self:center}
-.ck{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:0 0 10px;background:rgba(255,255,255,.02)}
-.ck summary{cursor:pointer;font-size:13px;color:var(--gold);list-style:none}
-.ck summary::-webkit-details-marker{display:none}
-.ck .ckH{font-size:12px;margin:6px 0 2px}.ck .ckH.warn{color:#f0b429}
-.ckR{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;padding:6px 0;border-top:1px solid var(--line);font-size:13px;align-items:baseline}
-.ckR .mut{grid-column:1/-1;font-size:12px}
-.ckR span{text-align:right}
-.ckR.ok span{color:#2ecc8f}.ckR.due span{color:#f0b429;font-weight:600}.ckR.skip span,.ckR.wait span{color:var(--mut)}
+.hero{display:flex;gap:12px;align-items:center;border-radius:12px;padding:12px 14px;margin:0 0 8px;border:1px solid var(--line);background:var(--panel2)}
+.hero .hi{font-size:28px;line-height:1;flex:0 0 auto}
+.hero .ht{font-size:17px;font-weight:700;line-height:1.25}
+.hero .hs{font-size:12.5px;color:var(--mut);margin-top:3px;line-height:1.4}
+.hero.ok{background:rgba(46,189,133,.12);border-color:rgba(46,189,133,.55)}.hero.ok .ht{color:var(--up)}
+.hero.due{background:rgba(240,164,58,.16);border-color:var(--warn);animation:ckp 1.8s ease-in-out infinite}.hero.due .ht{color:var(--warn)}
+.hero.stale,.hero.none{background:rgba(246,70,93,.12);border-color:rgba(246,70,93,.6)}.hero.stale .ht,.hero.none .ht{color:var(--dn)}
+.hero.closed .ht{color:var(--mut)}
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 8px}
+.slot{border:1px solid var(--line);border-radius:10px;padding:8px 4px;text-align:center;background:var(--panel2)}
+.slot b{display:block;font-size:18px;font-variant-numeric:tabular-nums;line-height:1.2}
+.slot small{display:block;font-size:11px;color:var(--mut);line-height:1.25}
+.slot em{display:block;font-style:normal;font-size:12px;margin-top:4px;font-weight:700}
+.slot.ok{border-color:rgba(46,189,133,.6);background:rgba(46,189,133,.1)}.slot.ok em{color:var(--up)}
+.slot.due{border-color:var(--warn);background:rgba(240,164,58,.16)}.slot.due em,.slot.due b{color:var(--warn)}
+.slot.skip{opacity:.5;border-style:dashed}.slot.wait{opacity:.85}.slot.wait em,.slot.skip em{color:var(--mut);font-weight:500}
+.ckMore{margin:0 0 12px;font-size:12px;color:var(--mut)}
+.ckMore summary{cursor:pointer;list-style:none;padding:4px 2px;line-height:1.4}
+.ckMore summary::-webkit-details-marker{display:none}
+.ckMore summary::after{content:' ▾';color:var(--mut)}
+.ckMore .note{margin:4px 0 0}
+.tabbar button{position:relative}
+.tdot{display:none;position:absolute;top:3px;right:4px;width:9px;height:9px;border-radius:50%;background:var(--dn);animation:ckd 1.6s ease-in-out infinite}
+@keyframes ckp{0%,100%{box-shadow:0 0 0 0 rgba(240,164,58,.5)}50%{box-shadow:0 0 0 7px rgba(240,164,58,0)}}
+@keyframes ckd{0%,100%{box-shadow:0 0 0 0 rgba(246,70,93,.6)}50%{box-shadow:0 0 0 5px rgba(246,70,93,0)}}
+@media(prefers-reduced-motion:reduce){.hero.due,.tdot{animation:none}}
 .hSet{margin:0;font-size:12px;color:var(--mut)}
 .hSet summary{cursor:pointer;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);list-style:none;white-space:nowrap}
 .hSet summary::-webkit-details-marker{display:none}
@@ -408,7 +426,7 @@ i.vd.u{background:var(--up)} i.vd.d{background:var(--dn)}
 
   <section class="tools" id="tools">
     <div class="tabbar" role="tablist">
-      <button class="on" data-tab="t1" role="tab">Options &amp; ออเดอร์</button>
+      <button class="on" data-tab="t1" role="tab">Options &amp; ออเดอร์<i class="tdot" id="tdot"></i></button>
       <button data-tab="t2" role="tab" id="tbNews">ข่าว</button>
       <button data-tab="t3" role="tab">SMC · ICT</button>
       <button data-tab="t4" role="tab">ข้อมูลอื่นๆ</button>
@@ -416,16 +434,17 @@ i.vd.u{background:var(--up)} i.vd.d{background:var(--dn)}
     <div class="tabpane on" id="t1">
         <div class="card" id="optCard" data-col>
           <h3>Options ตามราคาใช้สิทธิ · COMEX GC1!</h3>
+          <div class="hero" id="ckHero"></div>
+          <div class="slots" id="ckSlots"></div>
+          <details class="ckMore" id="ckMore"><summary id="ckNews">📰 ข่าว · วิธีนับเวลา</summary>
+            <div class="note">นับวันใหม่ตอน 07:30 (เวลาไทย) · ช่องจะติ๊กเองเมื่อมีการอ่านข้อมูลในช่วงนั้น (ช่วงของ 14:00 เริ่ม 13:00, ช่วงของ 19:45 เริ่ม 18:45) · อ่านก่อนข่าวแรงออกราว 30 นาที · อิงเวลามาตรฐานของสหรัฐฯ ฤดูร้อนเลื่อนเข้ามา 1 ชั่วโมง · ตลาดปิดสุดสัปดาห์ (ประมาณ เสาร์ 05:00 – จันทร์ 06:00) · เป็นแนวทาง ไม่ใช่สัญญาณซื้อขาย</div>
+          </details>
           <div class="omode" id="omode" role="radiogroup" aria-label="เกณฑ์หากำแพง"><span class="mut">เกณฑ์กำแพง:</span>
             <button data-m="vol" class="on">Volume</button><button data-m="oi">OI</button><button data-m="both">ทั้งสอง (รวมกัน)</button></div>
           <div class="note" id="omHint" style="margin:-2px 0 8px"></div>
           <div class="omode" id="optExpRow" style="display:none"><span class="mut">วันหมดอายุ:</span><select id="optExp" style="background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font:inherit"></select></div>
-          <div class="note" id="optMeta" style="margin:0 0 8px"></div>
-          <div id="cloudMsg" class="mut" style="font-size:12px;margin:-4px 0 8px"></div>
-          <details class="ck" id="ckD" open><summary>⏰ เช็คลิสอ่านข้อมูล Options วันนี้ <span class="mut" id="ckSum"></span></summary>
-            <div id="ckBody"></div>
-            <div class="note" style="margin:6px 0 0">นับวันใหม่ตอน 07:30 (เวลาไทย) · ติ๊กให้เองเมื่อมีการอ่านข้อมูลในช่วงนั้น (ช่วงของ 14:00 เริ่ม 13:00, ช่วงของ 19:45 เริ่ม 18:45) · อิงเวลามาตรฐานของสหรัฐฯ ฤดูร้อนเลื่อนเข้ามา 1 ชั่วโมง · เป็นแนวทาง ไม่ใช่สัญญาณซื้อขาย</div>
-          </details>
+          <div class="note" id="optMeta" style="margin:0 0 4px"></div>
+          <div id="cloudMsg" class="mut" style="font-size:12px;margin:0 0 10px"></div>
           <div class="plan" id="optKpi"></div>
 
           <h3 style="margin-top:12px">แผนตามกฎเลขกลม 00/50</h3>
@@ -954,7 +973,7 @@ function renderOpt_(){
   if(!OPT.rows.length)return;
   const st=optStats(),px=S.A?S.A.px:null,pxGC=px==null?null:px+BASIS;
   const isSnap=OPT.asof===OPT_DEFAULT.asof;
-  $('#optMeta').innerHTML=`ข้อมูล ณ ${OPT.asof} · สัญญาหมดอายุ ${OPT.exp}${isSnap?' · GC Dec ≈ '+f2(OPT.fut):''}<br><span class="warn">${isSnap?'เป็น Snapshot ไม่อัปเดตอัตโนมัติ — ตลาดเปลี่ยนเร็ว ให้กด "อัปเดตข้อมูล" ด้านล่างก่อนใช้งาน':'ข้อมูลที่อ่านมา ณ เวลาข้างบน (ไม่อัปเดตเอง) — ตลาดเปลี่ยนเร็ว ให้อ่านใหม่ด้วยบุ๊กมาร์กก่อนใช้งาน'}</span>`;
+  $('#optMeta').innerHTML=`<span class="mut">ข้อมูล ณ ${OPT.asof} · หมดอายุ ${OPT.exp}${isSnap?' · GC Dec ≈ '+f2(OPT.fut):''}</span>`+(isSnap?'<br><span class="warn">เป็นข้อมูลตัวอย่าง ไม่อัปเดตเอง — อ่านข้อมูลจริงด้วยบุ๊กมาร์กก่อนใช้งาน</span>':'');
   const mx=Math.max(...OPT.rows.map(r=>cv(r)+pv(r)),1),on=oname();
   $('#optKpi').innerHTML=
     `<div><small>Call ${on} รวม</small><b style="color:#4c9be8">${st.tc.toLocaleString()}</b></div>
@@ -1182,26 +1201,37 @@ const ckInfo=t=>{const x=t-30*60e3,d=Math.floor(x/864e5);return{d,o:(x-d*864e5)/
 const ckLog=()=>{try{return JSON.parse(localStorage.getItem('goldOptLog')||'[]')}catch(e){return[]}};
 function ckAdd(t){if(!t)return;try{let a=ckLog();if(!a.includes(t)){a.push(t);const cut=Date.now()-4*864e5;a=a.filter(x=>x>cut).sort((p,q)=>p-q).slice(-60);localStorage.setItem('goldOptLog',JSON.stringify(a))}}catch(e){}}
 const hmTh=t=>{const d=new Date(t+7*3600e3),p=n=>String(n).padStart(2,'0');return p(d.getUTCHours())+':'+p(d.getUTCMinutes())};
+const ckClosed=t=>{const d=new Date(t+7*3600e3),dow=d.getUTCDay(),m=d.getUTCHours()*60+d.getUTCMinutes();return (dow===6&&m>=300)||dow===0||(dow===1&&m<360)};
 function renderCk(){
-  const el=$('#ckBody');if(!el)return;
-  const now=Date.now(),n=ckInfo(now),a=ckLog();
-  let done=0,due=0;
-  const rows=CK_SLOTS.map((s,i)=>{
+  const hero=$('#ckHero');if(!hero)return;
+  const now=Date.now(),n=ckInfo(now),a=ckLog(),lt=lastOptT(),age=lt?now-lt:0,closed=ckClosed(now);
+  const fm=ms=>{const h=Math.floor(ms/36e5),m=Math.floor(ms/6e4)%60;return (h?h+' ชม. ':'')+m+' น.'};
+  let done=0,dueSlot=null,nextSlot=null;
+  const pills=CK_SLOTS.map((s,i)=>{
     const hit=a.filter(t=>{const q=ckInfo(t);return q.d===n.d&&q.o>=CK_START[i]&&q.o<CK_START[i+1]});
     let st,cls;
-    if(hit.length){st='✓ อ่านแล้ว '+hmTh(hit[hit.length-1]);cls='ok';done++}
+    if(hit.length){st='✓ '+hmTh(hit[hit.length-1]);cls='ok';done++}
+    else if(closed){st='ตลาดปิด';cls='wait'}
     else if(n.o>=CK_START[i+1]){st='ข้าม';cls='skip'}
-    else if(n.o>=CK_START[i]){st='⏰ ถึงเวลา — กดอ่าน';cls='due';due++}
-    else{st='ยังไม่ถึงเวลา';cls='wait'}
-    return '<div class="ckR '+cls+'"><b>'+s.t+'</b><span style="text-align:left">'+s.l+'</span><span>'+st+'</span><div class="mut">'+s.d+'</div></div>';
+    else if(n.o>=CK_START[i]){
+      if(lt&&age<45*6e4){st='✓ '+hmTh(lt);cls='ok';done++}
+      else{st='⏰ ถึงเวลา';cls='due';dueSlot=dueSlot||s}
+    }else{st='ยังไม่ถึง';cls='wait';nextSlot=nextSlot||s}
+    return '<div class="slot '+cls+'"><b>'+s.t+'</b><small>'+s.l+'</small><em>'+st+'</em></div>';
   }).join('');
-  const lt=lastOptT(),age=lt?now-lt:0,ah=Math.floor(age/36e5),am=Math.floor(age/6e4)%60;
-  const fresh=!lt?'ยังไม่เคยอ่านข้อมูลจริง (ใช้ข้อมูลตัวอย่างอยู่)':'ข้อมูลล่าสุด '+hmTh(lt)+' · เมื่อ '+(ah?ah+' ชม. ':'')+am+' น. ที่แล้ว';
-  const stale=!lt||age>3*36e5;
+  const how='เปิดหน้า Chain ของ TradingView แล้วแตะบุ๊กมาร์ก “อ่าน Options”';
+  let cls,ic,ti,su;
+  if(!lt){cls='none';ic='⚠️';ti='ยังเป็นข้อมูลตัวอย่าง';su='อ่านข้อมูลจริงก่อนใช้งาน — '+how}
+  else if(closed){cls='closed';ic='🌙';ti='ตลาดทองปิด (สุดสัปดาห์)';su='อ่านล่าสุด '+hmTh(lt)+' · ยังไม่ต้องอ่านข้อมูลใหม่ จนกว่าตลาดจะเปิด'}
+  else if(dueSlot){cls='due';ic='⏰';ti='ถึงเวลาอ่านรอบ '+dueSlot.t;su='ข้อมูลล่าสุด '+hmTh(lt)+' ('+fm(age)+'ที่แล้ว) — '+how}
+  else if(age>3*36e5){cls='stale';ic='⚠️';ti='ข้อมูลเก่า '+fm(age);su='อ่านล่าสุด '+hmTh(lt)+' · ถ้าตลาดกำลังเคลื่อนไหว ควรอ่านใหม่ — '+how}
+  else{cls='ok';ic='✅';ti='ข้อมูลสด · อ่านเมื่อ '+hmTh(lt);su=fm(age)+'ที่แล้ว · '+(nextSlot?'รอบถัดไป '+nextSlot.t:'วันนี้ครบทุกรอบแล้ว')}
+  hero.className='hero '+cls;
+  hero.innerHTML='<div class="hi">'+ic+'</div><div><div class="ht">'+ti+'</div><div class="hs">'+su+'</div></div>';
+  $('#ckSlots').innerHTML=pills;
   const nw=document.getElementById('nws'),nt=nw&&nw.textContent.trim();
-  el.innerHTML='<div class="ckH'+(stale?' warn':'')+'">'+fresh+(stale&&lt?' — เก่าเกิน 3 ชม. ถ้าตลาดกำลังเคลื่อนไหว ควรอ่านใหม่':'')+'</div>'+rows
-    +(nt?'<div class="ckR wait"><b>ข่าว</b><span style="text-align:left">ก่อนข่าวแรง</span><span></span><div class="mut">'+nt.replace(/&/g,'&amp;').replace(/</g,'&lt;')+' — อ่านข้อมูลก่อนข่าวออกราว 30 นาที</div></div>':'');
-  const sm=$('#ckSum');if(sm)sm.textContent='· '+done+'/'+CK_SLOTS.length+' ครั้ง'+(due?' · ⏰ ถึงเวลาแล้ว':'');
+  const cn=$('#ckNews');if(cn)cn.textContent=nt?'📰 '+nt:'📰 ข่าว · วิธีนับเวลา';
+  const td=$('#tdot');if(td)td.style.display=(cls==='due'||cls==='stale'||cls==='none')?'block':'none';
 }
 setTimeout(renderCk,1500);setInterval(renderCk,60000);
 // ===== ซิงก์ขึ้น GitHub (branch data / options.json) =====
