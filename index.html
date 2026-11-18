@@ -1188,12 +1188,19 @@ $('#bmCopy').onclick=async()=>{const m=$('#bmMsg');try{await navigator.clipboard
   const ta=document.createElement('textarea');ta.value=BM_CODE;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');m.textContent=' คัดลอกแล้ว'}catch(x){m.textContent=' คัดลอกไม่ได้ — กดค้างที่ช่องแล้วเลือกคัดลอก'}ta.remove()}};
 // รับข้อมูลจากบุ๊กมาร์ก: .../gold-analysis/#opt=<base64url JSON {t,groups}>
 // ตั้งส่วนต่าง GC − ราคากราฟ อัตโนมัติจากราคา GC ที่บุ๊กมาร์กอ่านได้ (ใช้เฉพาะเครื่องที่กดอ่านเอง)
-function autoBasis(gc,n){n=n||0;
+async function autoBasis(gc,n){n=n||0;
   if(!S.A||!isFinite(S.A.px)){if(n<20)setTimeout(()=>autoBasis(gc,n+1),500);return}
-  BASIS=Math.round((gc-S.A.px)*100)/100;try{localStorage.setItem('goldBasis',BASIS)}catch(x){}
+  const nb=Math.round((gc-S.A.px)*100)/100,m=$('#optMsg');
+  const say=t=>{if(m)m.textContent=(m.textContent||'')+t};
+  // กันค่าเพี้ยน: ส่วนต่างที่เป็นไปไม่ได้ หรือตลาดวิ่งแรงจนราคา GC (ที่อาจดีเลย์) ไม่ทันกราฟ
+  let fast=0;try{const c=await klines(S.src,'1m',12);if(c.length>=11)fast=Math.abs(c[c.length-1].close-c[c.length-11].close)}catch(e){}
+  if(nb<-6||nb>35||fast>6){
+    say(' · ไม่ได้ตั้งส่วนต่าง GC−กราฟอัตโนมัติ ('+(nb>0?'+':'')+nb.toFixed(1)+(fast>6?' · ราคาเพิ่งวิ่ง '+fast.toFixed(0)+' จุดใน 10 นาที ราคา GC อาจดีเลย์':' · ผิดปกติ')+') — รอให้นิ่งแล้วอ่านใหม่ หรือกรอกราคา GC ในช่องซิงก์เอง');
+    return}
+  BASIS=nb;try{localStorage.setItem('goldBasis',BASIS)}catch(x){}
   const g=$('#gcpx');if(g)g.value=gc;
   try{refreshAutoOrd();drawLines();renderOpt();renderOrd()}catch(e){}
-  const m=$('#optMsg');if(m)m.textContent=(m.textContent||'')+' · ตั้งส่วนต่าง GC−กราฟ = '+(BASIS>0?'+':'')+BASIS.toFixed(2)+' อัตโนมัติ (GC '+gc.toLocaleString('en-US')+')';
+  say(' · ตั้งส่วนต่าง GC−กราฟ = '+(BASIS>0?'+':'')+BASIS.toFixed(2)+' อัตโนมัติ (GC '+gc.toLocaleString('en-US')+')');
 }
 function importHash(){
   const h=location.hash||'';if(!h.startsWith('#opt='))return;
