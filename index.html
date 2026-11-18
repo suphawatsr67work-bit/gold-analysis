@@ -419,6 +419,10 @@ i.vd.u{background:var(--up)} i.vd.d{background:var(--dn)}
           <details open class="optD" id="optTblD"><summary>ตารางรายสไตรก์ (Call ▮ Put) · <span id="omName">Volume</span></summary><div class="optTbl"><table class="opt" style="margin-top:8px"><thead><tr><th>Strike</th><th>Call ▮ Put (<span class="omName">Volume</span>)</th><th class="r">กฎ P/C</th></tr></thead><tbody id="optRows"></tbody></table></div></details>
           <div class="note">กฎ (ตามเกณฑ์ที่เลือก): Put &gt; Call ที่ Strike = BUY (แนวรับ) · Call &gt; Put = SELL (แนวต้าน) · ดูในรัศมี ±10 จุดรอบเลขกลม · SL 25 จุด · RR 1:2</div>
           <div class="ctl mut" style="margin-top:8px;font-size:12px">ส่วนต่าง GC − ราคาบนกราฟ <input type="number" id="basis" step="0.1" value="0"> จุด · ซิงค์จากราคา GC ตอนนี้ <input type="number" id="gcpx" step="0.1" placeholder="เช่น 3865.3" style="width:95px"><button id="gcGo">ซิงค์</button></div>
+          <details id="bmD"><summary>📱 มือถือ (iPhone/Android): ปุ่มลัดอ่านข้อมูลจาก TradingView</summary>
+            <div class="note" style="margin:6px 0">ครั้งเดียว: ① กด "คัดลอกโค้ด" ② ใน Safari เพิ่มบุ๊กมาร์กหน้านี้ (แชร์ → เพิ่มบุ๊กมาร์ก) ตั้งชื่อว่า "อ่าน Options" ③ เปิดบุ๊กมาร์ก → แก้ไข → แทนที่ช่องที่อยู่ (URL) ด้วยโค้ดที่คัดลอก<br>ใช้งาน: เปิดหน้า <b>TradingView → Options → Chain</b> (iPhone: กด aA → Request Desktop Website ก่อน) รอตารางโหลด แล้วเปิดบุ๊กมาร์ก "อ่าน Options" จะเด้งมาที่เว็บนี้พร้อมข้อมูลใหม่</div>
+            <div class="ctl"><button id="bmCopy">คัดลอกโค้ดบุ๊กมาร์ก</button><span id="bmMsg" class="mut"></span></div>
+          </details>
           <details><summary>อัปเดตข้อมูล Options (อัตโนมัติด้วยสคริปต์ หรือวางเอง)</summary>
             <div class="note" style="margin:6px 0">อัตโนมัติ: ติดตั้ง <a href="gold-options-sync.user.js" style="color:var(--gold,#e6b94c)">gold-options-sync.user.js</a> ใน Tampermonkey แล้วเปิดหน้า Options ของ TradingView ค้างไว้ ข้อมูลจะเข้าที่นี่เอง · หรือทำเองตามขั้นตอนด้านล่าง</div>
             <div style="margin-top:6px">1) เปิดหน้า Options Chain ของ GC1! บน TradingView &nbsp;2) กด F12 → Console แล้ววางโค้ดนี้ (จะคัดลอกผลให้อัตโนมัติ) &nbsp;3) วางผลลงช่องนี้แล้วกด "ใช้ข้อมูล":</div>
@@ -1100,10 +1104,13 @@ $('#snip').textContent=SNIP;
 $('#refGo').onclick=()=>{const ref=+$('#ref').value;if(!ref||!S.cs.length)return;const raw=S.cs[S.cs.length-1].close-OFF;OFF=Math.round((ref-raw)*100)/100;$('#off').value=OFF;try{localStorage.setItem('goldOff',OFF)}catch(x){}load()};
 $('#gcGo').onclick=()=>{const gc=+$('#gcpx').value;if(!gc||!S.A)return;BASIS=Math.round((gc-S.A.px)*100)/100;try{localStorage.setItem('goldBasis',BASIS)}catch(x){}refreshAutoOrd();drawLines();renderOpt();renderOrd()};
 $('#basis').onchange=e=>{BASIS=+e.target.value||0;try{localStorage.setItem('goldBasis',BASIS)}catch(x){}refreshAutoOrd();drawLines();renderOpt();renderOrd()};
-function applyOptRows(rows,tMs,note,exp){
+function fmtAsof(tMs){
   const d=new Date((tMs||Date.now())+7*3600e3),pad=n=>String(n).padStart(2,'0');
-  OPT={asof:`${pad(d.getUTCDate())}/${pad(d.getUTCMonth()+1)}/${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} (เวลาไทย)`,exp:exp||'ตามที่วางล่าสุด',fut:OPT.fut,rows};
-  try{localStorage.setItem('goldOpt',JSON.stringify(OPT))}catch(e){}
+  return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth()+1)}/${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} (เวลาไทย)`}
+function lastOptT(){try{return +localStorage.getItem('goldOptT')||0}catch(e){return 0}}
+function applyOptRows(rows,tMs,note,exp){
+  OPT={asof:fmtAsof(tMs),exp:exp||'ตามที่วางล่าสุด',fut:OPT.fut,rows};
+  try{localStorage.setItem('goldOpt',JSON.stringify(OPT));localStorage.setItem('goldOptT',String(tMs||Date.now()))}catch(e){}
   setOmode(OMODE,true);
   $('#optMsg').textContent=`ใช้ข้อมูล ${rows.length} Strike แล้ว${note||''}`;if(S.A)wlAdd();refreshAutoOrd();drawLines();renderOpt();renderOrd();
 }
@@ -1129,9 +1136,28 @@ function renderExpSel(){
 function applyChosen(force){
   const g=pickGroup();if(!g)return 'none';
   const r=parseOpt(JSON.stringify(g.rows)),exp=g.label||'ตามที่วางล่าสุด';
-  if(!force&&OPT&&OPT.rows&&OPT.exp===exp&&JSON.stringify(OPT.rows)===JSON.stringify(r))return 'same';
+  if(!force&&OPT&&OPT.rows&&OPT.exp===exp&&JSON.stringify(OPT.rows)===JSON.stringify(r)){
+    // ตัวเลขเหมือนเดิมแต่อ่านใหม่กว่า → อัปเดตเวลาอ้างอิงอย่างเดียว (ไม่ให้ขึ้นว่าข้อมูลเก่า)
+    if(OPTG.t>lastOptT()){OPT.asof=fmtAsof(OPTG.t);try{localStorage.setItem('goldOpt',JSON.stringify(OPT));localStorage.setItem('goldOptT',String(OPTG.t))}catch(e){}renderOpt()}
+    return 'same'}
   applyOptRows(r,OPTG.t,' · อัตโนมัติจากสคริปต์',exp);return 'ok'}
 window.__applyOptGroups=(groups,tMs)=>{try{OPTG={groups,t:tMs||Date.now()};renderExpSel();return applyChosen(false)}catch(e){return 'err:'+e.message}};
+const BM_CODE="javascript:(function(){var f=function(e){return(e.innerText||'').split('\\n')[0].trim()},n=function(c){var x=f(c).replace(/[,\\s]/g,'');return/^\\d+$/.test(x)?+x:0};var trs=[].slice.call(document.querySelectorAll('tr')),m=null,i,H,si,idx,v,o;for(i=0;i<trs.length&&!m;i++){H=[].slice.call(trs[i].children).map(f);si=H.findIndex(function(x){return/\\u0e43\\u0e0a\\u0e49\\u0e2a\\u0e34\\u0e17\\u0e18\\u0e34|^strike/i.test(x)});if(si<0||H.length<5)continue;idx=function(re){return H.map(function(x,k){return re.test(x)?k:-1}).filter(function(k){return k>=0})};v=idx(/^\\u0e1b\\u0e23\\u0e34\\u0e21\\u0e32\\u0e13|^vol/i);o=idx(/^open\\s*int|^oi$/i);var cv=v.filter(function(k){return k<si}).pop(),pv=v.find(function(k){return k>si});if(cv!==undefined&&pv!==undefined)m={s:si,cv:cv,pv:pv,co:o.filter(function(k){return k<si}).pop(),po:o.find(function(k){return k>si})}}if(!m)m={s:8,cv:6,pv:10,co:7,po:9};var need=Math.max(m.s,m.cv,m.pv,m.co||0,m.po||0),G=[],cur=null,lab='';trs.forEach(function(r){var ch=r.children,d=ch.length>need&&/^[\\d,]{4,6}$/.test((ch[m.s].innerText||'').trim());if(d){if(!cur){cur={label:lab,rows:[]};G.push(cur)}cur.rows.push([n(ch[m.s]),n(ch[m.cv]),n(ch[m.pv]),m.co===undefined?0:n(ch[m.co]),m.po===undefined?0:n(ch[m.po])])}else{var tx=(r.innerText||'').replace(/\\s+/g,' ').trim();if(/\\bDTE\\b/i.test(tx)&&tx.length<80){lab=tx;cur=null}}});G=G.filter(function(g){return g.rows.length>=3});if(!G.length){alert('\\u0e2d\\u0e48\\u0e32\\u0e19\\u0e15\\u0e32\\u0e23\\u0e32\\u0e07\\u0e44\\u0e21\\u0e48\\u0e44\\u0e14\\u0e49 \\u2014 \\u0e43\\u0e0a\\u0e49\\u0e41\\u0e17\\u0e47\\u0e1a Chain \\u0e43\\u0e2b\\u0e49\\u0e15\\u0e32\\u0e23\\u0e32\\u0e07\\u0e42\\u0e2b\\u0e25\\u0e14\\u0e04\\u0e23\\u0e1a (\\u0e16\\u0e49\\u0e32\\u0e40\\u0e1b\\u0e47\\u0e19 iPhone \\u0e43\\u0e2b\\u0e49\\u0e40\\u0e25\\u0e37\\u0e2d\\u0e01 Request Desktop Website \\u0e01\\u0e48\\u0e2d\\u0e19)');return}var j=JSON.stringify({t:Date.now(),groups:G}),b=btoa(unescape(encodeURIComponent(j))).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');location.href='https://suphawatsr67work-bit.github.io/gold-analysis/'+String.fromCharCode(35)+'opt='+b})();";
+$('#bmCopy').onclick=async()=>{const m=$('#bmMsg');try{await navigator.clipboard.writeText(BM_CODE);m.textContent=' คัดลอกแล้ว'}catch(e){
+  const ta=document.createElement('textarea');ta.value=BM_CODE;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');m.textContent=' คัดลอกแล้ว'}catch(x){m.textContent=' คัดลอกไม่ได้ — กดค้างที่ช่องแล้วเลือกคัดลอก'}ta.remove()}};
+// รับข้อมูลจากบุ๊กมาร์ก: .../gold-analysis/#opt=<base64url JSON {t,groups}>
+function importHash(){
+  const h=location.hash||'';if(!h.startsWith('#opt='))return;
+  try{
+    let b=h.slice(5).replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';
+    const j=JSON.parse(decodeURIComponent(escape(atob(b))));
+    history.replaceState(null,'',location.pathname+location.search);
+    if(j&&j.groups&&j.groups.length){const r=window.__applyOptGroups(j.groups,j.t||Date.now());
+      const m=$('#optMsg');if(m)m.textContent=(m.textContent||'').replace(' · อัตโนมัติจากสคริปต์',' · จากบุ๊กมาร์ก');
+      const d=$('#optCard');if(d&&d.scrollIntoView)d.scrollIntoView({block:'start'});return r}
+  }catch(e){const m=$('#optMsg');if(m)m.textContent='อ่านข้อมูลจากบุ๊กมาร์กไม่ได้: '+e.message}
+}
+setTimeout(importHash,2000);
 window.__applyOpt=(rows,tMs)=>{try{
   const r=parseOpt(JSON.stringify(rows));
   const same=OPT&&OPT.rows&&JSON.stringify(OPT.rows)===JSON.stringify(r);
