@@ -1416,7 +1416,8 @@ class Ovl{
           ctx.strokeStyle=s.color;ctx.lineWidth=Math.max(1,Math.round(hr));ctx.setLineDash((s.dash||[]).map(d=>d*hr));
           ctx.beginPath();ctx.moveTo(A,y);ctx.lineTo(B,y);ctx.stroke();ctx.setLineDash([]);
           if(s.label){
-            if(s.t1==null)txt(s.label,B-4*hr,y-7*hr,s.color,'right');
+            if(s.t1==null&&s.left)txt(s.label,A+4*hr,y+(s.below?8:-7)*hr,s.color,'left');
+            else if(s.t1==null)txt(s.label,B-4*hr,y-7*hr,s.color,'right');
             else txt(s.label,(A+B)/2,y+(s.below?8:-7)*hr,s.color,'center');
           }
         }
@@ -1531,17 +1532,20 @@ function liqCalc(cs,atr,smc,ict){
   const sweepOf=(isHigh,p,from)=>{for(let j=from;j<n;j++){
     if(isHigh?cs[j].high>p:cs[j].low<p){const c=cs[j].close;return{j,rej:isHigh?c<=p:c>=p}}}return null};
   const add=(side,p,i0,name,strong,from)=>all.push({side,p,i0,name,strong,sw:sweepOf(side==='BSL',p,from)});
+  // เริ่มเส้นที่แท่งที่ทำ High/Low จริง (ictCalc เริ่มเส้น PDH/PWH ที่ต้นวัน/สัปดาห์)
+  const origin=(isHigh,o)=>{for(let j=Math.min(o.i,n)-1;j>=0;j--){if(isHigh?cs[j].high>=o.p-1e-6:cs[j].low<=o.p+1e-6)return j}return o.i};
   smc.swH.forEach(s=>{const e=eqIdx.has(s.i);add('BSL',s.p,s.i,e?'EQH':'Swing High',e,s.i+1)});
   smc.swL.forEach(s=>{const e=eqIdx.has(s.i);add('SSL',s.p,s.i,e?'EQL':'Swing Low',e,s.i+1)});
   if(ict)[['pdh','BSL','PDH'],['pwh','BSL','PWH'],['pdl','SSL','PDL'],['pwl','SSL','PWL']].forEach(([k,side,nm])=>{
-    const o=ict[k];if(o)add(side,o.p,o.i,nm,true,o.i)});
+    const o=ict[k];if(o)add(side,o.p,origin(side==='BSL',o),nm,true,o.i)});
   const dd=arr=>{const out=[];arr.slice().sort((x,y)=>(y.strong-x.strong)||(y.i0-x.i0)).forEach(x=>{
     if(!out.some(y=>y.side===x.side&&Math.abs(y.p-x.p)<=tol))out.push(x)});return out};
   const live=dd(all.filter(x=>!x.sw)),swept=dd(all.filter(x=>x.sw&&x.sw.j>=n-50));
   const near=side=>live.filter(x=>x.side===side).sort((x,y)=>Math.abs(x.p-px)-Math.abs(y.p-px));
   const b=near('BSL'),s=near('SSL');
   R.bsl=b[0]||null;R.ssl=s[0]||null;
-  R.live=b.slice(0,CFG.liqMax).concat(s.slice(0,CFG.liqMax));
+  const rng=x=>Math.abs(x.p-px)<=4*a;   // ซ่อนเส้นที่ไกลเกิน 4 ATR (แผงสรุปยังแสดงใกล้สุดเสมอ)
+  R.live=b.filter(rng).slice(0,CFG.liqMax).concat(s.filter(rng).slice(0,CFG.liqMax));
   R.swept=swept.sort((x,y)=>y.sw.j-x.sw.j).slice(0,2);
   R.last=dd(all.filter(x=>x.sw)).sort((x,y)=>y.sw.j-x.sw.j)[0]||null;
   return R}
@@ -1568,7 +1572,7 @@ function drawConcepts(){
   const cs=S.cs,n=cs.length,T=i=>cs[Math.max(0,Math.min(n-1,i))].time,ck=id=>$(id).checked,sh=[];
   const m=A.smc,ic=A.ict,tfs=TFSEC[S.tf];
   const box=(i0,i1,p0,p1,fill,stroke,label,lc)=>sh.push({k:'box',t0:T(i0),t1:i1==null?null:T(i1),p0,p1,fill,stroke,label,lc});
-  const hl=(i0,i1,p,color,dash,label,below)=>sh.push({k:'hline',t0:i0==null?null:T(i0),t1:i1==null?null:T(i1),p,color,dash,label,below});
+  const hl=(i0,i1,p,color,dash,label,below,left)=>sh.push({k:'hline',t0:i0==null?null:T(i0),t1:i1==null?null:T(i1),p,color,dash,label,below,left});
   if(ck('#tSmcPd')&&m.range){const r=m.range;
     box(r.i0,null,r.top,r.eq,'rgba(246,70,93,.07)',null,'Premium','#f6465d99');
     box(r.i0,null,r.eq,r.bot,'rgba(46,189,133,.07)',null,'Discount','#2ebd8599');
@@ -1587,7 +1591,7 @@ function drawConcepts(){
   if(ck('#tLiq')&&A.liq){const q=A.liq,hh=0.12*(A.atrv||1);
     q.live.forEach(l=>{const b=l.side==='BSL';
       box(l.i0,null,l.p+hh,l.p-hh,b?'rgba(255,107,74,.24)':'rgba(47,183,255,.24)',null,null);
-      hl(l.i0,null,l.p,b?'#ff6b4a':'#2fb7ff',[],`${l.side} $ · ${l.name}`,!b)});
+      hl(l.i0,null,l.p,b?'#ff6b4a':'#2fb7ff',[],`${l.side} $ · ${l.name}`,!b,true)});
     q.swept.forEach(l=>{const b=l.side==='BSL',c=b?'#ff6b4a':'#2fb7ff';
       hl(l.i0,l.sw.j,l.p,c+'88',[3,4],`✕ ${l.name}`,!b);
       box(l.sw.j,l.sw.j,l.p+hh*2,l.p-hh*2,c+'55',c,null)})}
