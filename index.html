@@ -1525,7 +1525,7 @@ function ictCalc(cs,tfs){
 function liqCalc(cs,atr,smc,ict){
   const n=cs.length,a=atr||1,R={live:[],swept:[],bsl:null,ssl:null,last:null};
   if(!smc||n<10)return R;
-  const tol=0.15*a,px=cs[n-1].close;
+  const tol=0.6*a,px=cs[n-1].close;
   const eqIdx=new Set();[...smc.eqh,...smc.eql].forEach(q=>{eqIdx.add(q.i0);eqIdx.add(q.i1)});
   const all=[];
   const sweepOf=(isHigh,p,from)=>{for(let j=from;j<n;j++){
@@ -1537,13 +1537,13 @@ function liqCalc(cs,atr,smc,ict){
     const o=ict[k];if(o)add(side,o.p,o.i,nm,true,o.i)});
   const dd=arr=>{const out=[];arr.slice().sort((x,y)=>(y.strong-x.strong)||(y.i0-x.i0)).forEach(x=>{
     if(!out.some(y=>y.side===x.side&&Math.abs(y.p-x.p)<=tol))out.push(x)});return out};
-  const live=dd(all.filter(x=>!x.sw)),swept=dd(all.filter(x=>x.sw));
+  const live=dd(all.filter(x=>!x.sw)),swept=dd(all.filter(x=>x.sw&&x.sw.j>=n-50));
   const near=side=>live.filter(x=>x.side===side).sort((x,y)=>Math.abs(x.p-px)-Math.abs(y.p-px));
   const b=near('BSL'),s=near('SSL');
   R.bsl=b[0]||null;R.ssl=s[0]||null;
   R.live=b.slice(0,CFG.liqMax).concat(s.slice(0,CFG.liqMax));
-  R.swept=swept.sort((x,y)=>y.sw.j-x.sw.j).slice(0,3);
-  R.last=R.swept[0]||null;
+  R.swept=swept.sort((x,y)=>y.sw.j-x.sw.j).slice(0,2);
+  R.last=dd(all.filter(x=>x.sw)).sort((x,y)=>y.sw.j-x.sw.j)[0]||null;
   return R}
 // เวลา Kill Zone ปัจจุบัน/ถัดไป (ตามนาฬิกาจริง)
 const HM_BK=new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',hour12:false,hour:'2-digit',minute:'2-digit'});
