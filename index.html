@@ -1524,7 +1524,7 @@ function ictCalc(cs,tfs){
    SSL (Sell-side Liquidity) = Stop/Sell-stop ที่กองอยู่ใต้ Low  (Swing Low, EQL, PDL, PWL)
    Sweep = ราคาวิ่งผ่านระดับนั้นไปแล้ว (กวาดสภาพคล่อง) — rej=true ถ้าแท่งนั้นปิดกลับมาฝั่งเดิม (ไส้กวาดแล้วดีดกลับ) */
 function liqCalc(cs,atr,smc,ict){
-  const n=cs.length,a=atr||1,R={live:[],swept:[],bsl:null,ssl:null,last:null};
+  const n=cs.length,a=atr||1,R={live:[],swept:[],sweeps:[],lbs:[],bsl:null,ssl:null,last:null};
   if(!smc||n<10)return R;
   const tol=0.6*a,px=cs[n-1].close;
   const eqIdx=new Set();[...smc.eqh,...smc.eql].forEach(q=>{eqIdx.add(q.i0);eqIdx.add(q.i1)});
@@ -1547,7 +1547,26 @@ function liqCalc(cs,atr,smc,ict){
   const rng=x=>Math.abs(x.p-px)<=4*a;   // ซ่อนเส้นที่ไกลเกิน 4 ATR (แผงสรุปยังแสดงใกล้สุดเสมอ)
   R.live=b.filter(rng).slice(0,CFG.liqMax).concat(s.filter(rng).slice(0,CFG.liqMax));
   R.swept=swept.sort((x,y)=>y.sw.j-x.sw.j).slice(0,2);
-  R.last=dd(all.filter(x=>x.sw)).sort((x,y)=>y.sw.j-x.sw.j)[0]||null;
+  R.sweeps=dd(all.filter(x=>x.sw)).sort((x,y)=>y.sw.j-x.sw.j);
+  R.last=R.sweeps[0]||null;
+  /* Liquidity Block (แบบ B: กลุ่มราคา) — ตีความจากคลิป ไม่ใช่นิยามตายตัว
+     หลังระดับถูกกวาด "แล้วปิดกลับ" ให้รวมกลุ่มแท่งที่กดอยู่ใกล้ระดับนั้น (High/Low อยู่ในระยะ 1 ATR, ย้อนไม่เกิน 8 แท่ง) จนถึงแท่งที่กวาด
+     BSL ถูกกวาด → บล็อกฝั่งขาย: ขอบบน = High สูงสุดของกลุ่ม, ขอบล่าง = ตัวแท่ง (open/close) ต่ำสุดของกลุ่ม
+     SSL ถูกกวาด → บล็อกฝั่งซื้อ: ขอบล่าง = Low ต่ำสุดของกลุ่ม, ขอบบน = ตัวแท่งสูงสุดของกลุ่ม
+     ถือว่าหมดอายุเมื่อราคาปิดทะลุขอบนอกของบล็อก (ตามกฎคลิป Stop Loss อยู่เลยขอบนอกนี้) */
+  R.lbs=[];
+  for(const l of R.sweeps){
+    if(!l.sw.rej)continue;
+    const j=l.sw.j,age=n-1-j;if(age>60)continue;
+    const hi=l.side==='BSL';let s0=j;
+    for(let k=j-1;k>=Math.max(0,j-8);k--){if(hi?cs[k].high>=l.p-a:cs[k].low<=l.p+a)s0=k;else break}
+    let top=-Infinity,bot=Infinity;
+    for(let k=s0;k<=j;k++){const c=cs[k],bt=Math.min(c.open,c.close),bh=Math.max(c.open,c.close);
+      if(hi){top=Math.max(top,c.high);bot=Math.min(bot,bt)}else{bot=Math.min(bot,c.low);top=Math.max(top,bh)}}
+    let dead=false;for(let k=j+1;k<n;k++){if(hi?cs[k].close>top:cs[k].close<bot){dead=true;break}}
+    if(dead||!(top>bot))continue;
+    R.lbs.push({side:l.side,dir:hi?-1:1,i0:s0,j,top,bot,age,name:l.name,p:l.p});
+    if(R.lbs.length>=2)break}
   return R}
 // เวลา Kill Zone ปัจจุบัน/ถัดไป (ตามนาฬิกาจริง)
 const HM_BK=new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',hour12:false,hour:'2-digit',minute:'2-digit'});
@@ -1594,7 +1613,9 @@ function drawConcepts(){
       hl(l.i0,null,l.p,b?'#ff6b4a':'#2fb7ff',[],`${l.side} $ · ${l.name}`,!b,true)});
     q.swept.forEach(l=>{const b=l.side==='BSL',c=b?'#ff6b4a':'#2fb7ff';
       hl(l.i0,l.sw.j,l.p,c+'88',[3,4],`✕ ${l.name}`,!b);
-      box(l.sw.j,l.sw.j,l.p+hh*2,l.p-hh*2,c+'55',c,null)})}
+      box(l.sw.j,l.sw.j,l.p+hh*2,l.p-hh*2,c+'55',c,null)});
+    q.lbs.forEach(b=>{const sell=b.dir===-1;
+      box(b.i0,null,b.top,b.bot,sell?'rgba(255,107,74,.14)':'rgba(47,183,255,.14)',sell?'#ff6b4a':'#2fb7ff',sell?'LB ▼ ขาย':'LB ▲ ซื้อ',sell?'#ff9a85':'#7fd0ff')})}
   if(ic){
     if((ck('#tIctKz')||ck('#tIctSb'))&&ic.kzOk){
       ic.zones.forEach(z=>{if((z.kind==='kz'&&!ck('#tIctKz'))||(z.kind==='sb'&&!ck('#tIctSb')))return;
@@ -1634,7 +1655,21 @@ function renderSmc(){
       else if(hi)t=`Buy-stop เหนือ High ถูกกวาดแล้วราคาปิดกลับ → ตามแนวคิด SMC ฝั่งซื้อที่เข้าตามเบรกอาจติดกับ ${m.trend===-1?'<b class="dn">สอดคล้องโครงสร้าง Bearish</b> (มองหา Sell ตาม LB/สัญญาณ TF เล็ก)':m.trend===1?'<b class="warn">สวนโครงสร้าง Bullish</b> น้ำหนักน้อยลง':''}`;
       else t=`Sell-stop ใต้ Low ถูกกวาดแล้วราคาปิดกลับ → ตามแนวคิด SMC ฝั่งขายที่เข้าตามเบรกอาจติดกับ ${m.trend===1?'<b class="up">สอดคล้องโครงสร้าง Bullish</b> (มองหา Buy ตาม LB/สัญญาณ TF เล็ก)':m.trend===-1?'<b class="warn">สวนโครงสร้าง Bearish</b> น้ำหนักน้อยลง':''}`;
       h+=`<div class="note" style="margin:4px 0;color:var(--txt)">🧲 ${t}</div>`}
-    h+='<div class="note" style="margin:4px 0">BSL = สภาพคล่องฝั่งซื้อ (Stop เหนือ High/EQH/PDH/PWH) · SSL = ฝั่งขาย (ใต้ Low/EQL/PDL/PWL) · แถบทึบ = ยังไม่ถูกกวาด · เส้นประจาง + ✕ = ถูกกวาดแล้ว · เป็นเครื่องมืออ่านโครงสร้าง ไม่ใช่สัญญาณซื้อขาย</div>'}
+    h+='<div class="note" style="margin:4px 0">BSL = สภาพคล่องฝั่งซื้อ (Stop เหนือ High/EQH/PDH/PWH) · SSL = ฝั่งขาย (ใต้ Low/EQL/PDL/PWL) · แถบทึบ = ยังไม่ถูกกวาด · เส้นประจาง + ✕ = ถูกกวาดแล้ว · กล่องมีกรอบ "LB" = Liquidity Block (กลุ่มแท่งรอบระดับที่ถูกกวาดแล้วปิดกลับ · ตามคลิป Stop Loss อยู่เลยขอบนอกของกล่อง) · เป็นเครื่องมืออ่านโครงสร้าง ไม่ใช่สัญญาณซื้อขาย</div>';
+    // เช็กลิสต์เงื่อนไขตามคลิป (ทิศทางใหญ่ → กวาด → ปิดกลับ → มี LB → ยืนยัน TF เล็ก)
+    const ok=t=>`<b class="up">✓</b> ${t}`,no=t=>`<span class="mut">✗ ${t}</span>`;
+    h+=sg('เช็กลิสต์ตามคลิป');
+    if(!m.trend)h+=row('① ทิศทางใหญ่ (SMC)',no('ยังไม่ชัด'));
+    else{
+      const want=m.trend===-1?'BSL':'SSL',rec=(q.sweeps||[]).find(x=>x.side===want&&n-1-x.sw.j<=30);
+      const lb=(q.lbs||[]).find(x=>x.side===want&&x.age<=30);
+      h+=row('① ทิศทางใหญ่ (SMC)',ok(m.trend===-1?'Bearish → มองหาการกวาด BSL':'Bullish → มองหาการกวาด SSL'));
+      h+=row(`② กวาด ${want} ภายใน 30 แท่ง`,rec?ok(`${rec.name} ${f2(rec.p)} <span class="mut">(${n-1-rec.sw.j===0?'แท่งปัจจุบัน ยังไม่ปิด — ผลอาจเปลี่ยน':(n-1-rec.sw.j)+' แท่งก่อน'})</span>`):no('ยังไม่เกิด'));
+      h+=row('③ ปิดกลับหลังกวาด',rec?(rec.sw.rej?ok('ปิดกลับ'):no('ปิดทะลุ (อาจเป็นเบรกจริง)')):no('–'));
+      h+=row('④ มี Liquidity Block',lb?ok(`${f2(lb.bot)}–${f2(lb.top)}${px>=lb.bot&&px<=lb.top?' <b class="warn">(ราคาอยู่ในกล่อง)</b>':''}`):no('ยังไม่มี'));
+      h+=row('⑤ สัญญาณ 5–15 นาที',`<span class="mut">ต้องดูเอง (หน้านี้ไม่ตรวจ)</span>`);
+      const cnt=[1,!!rec,!!(rec&&rec.sw.rej),!!lb].filter(Boolean).length;
+      h+=`<div class="note" style="margin:4px 0;color:var(--txt)">${cnt===4?'ครบ ①–④ ตามคลิป — เหลือยืนยันใน Timeframe เล็ก (⑤)':`ยังไม่ครบ (${cnt}/4) — ตามคลิปคือรอก่อน`} · ไม่ใช่สัญญาณซื้อขาย</div>`}}
   h+=sg('SMC');
   if(!m.ev.length)h+=row('โครงสร้างตลาด','<span class="mut">ข้อมูลยังไม่พอ</span>');
   else{const l=m.ev[m.ev.length-1];
