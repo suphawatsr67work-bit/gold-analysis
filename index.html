@@ -379,6 +379,9 @@ i.vd.u{background:var(--up)} i.vd.d{background:var(--dn)}
           <label><input type="checkbox" id="tPmacd" checked> MACD</label>
           <label><input type="checkbox" id="tPstoch" checked> Stochastic</label>
         </div>
+        <div class="toggles"><span class="tgl">LIQUIDITY</span>
+          <label title="แสดงแหล่งสภาพคล่อง: BSL = Buy-side (Stop อยู่เหนือ High/EQH/PDH/PWH) · SSL = Sell-side (Stop อยู่ใต้ Low/EQL/PDL/PWL) พร้อมจุดที่ถูกกวาดไปแล้ว (Sweep)"><input type="checkbox" id="tLiq"> Liquidity (BSL/SSL + Sweep)</label>
+        </div>
         <div class="toggles"><span class="tgl">SMC</span>
           <label title="Break of Structure / Change of Character"><input type="checkbox" id="tSmcStruct"> โครงสร้าง BOS/CHoCH</label>
           <label title="Order Block ที่ยังไม่ถูกทำลาย"><input type="checkbox" id="tSmcOb"> Order Block</label>
@@ -549,7 +552,7 @@ i.vd.u{background:var(--up)} i.vd.d{background:var(--dn)}
 <script>
 /* ============ Indicators (pure functions) ============ */
 /* ============ Indicator settings (ปรับเองได้) ============ */
-const CFG_DEF={ema1:20,ema2:50,ema3:200,bbP:20,bbM:2,rsiP:14,rsiOB:70,rsiOS:30,macdF:12,macdS:26,macdG:9,stK:14,stD:3,stS:3,stOB:80,stOS:20,atrP:14,swing:5,obMax:3,fvgMax:4,fvgMin:0.15};
+const CFG_DEF={ema1:20,ema2:50,ema3:200,bbP:20,bbM:2,rsiP:14,rsiOB:70,rsiOS:30,macdF:12,macdS:26,macdG:9,stK:14,stD:3,stS:3,stOB:80,stOS:20,atrP:14,swing:5,obMax:3,fvgMax:4,fvgMin:0.15,liqMax:3};
 const CFG_FIELDS=[
   ['EMA 3 เส้น',[['ema1','เส้นสั้น',2,500,1],['ema2','เส้นกลาง',2,500,1],['ema3','เส้นยาว',2,1000,1]]],
   ['Bollinger Bands',[['bbP','ช่วง',2,200,1],['bbM','ส่วนเบี่ยงเบน σ',0.5,5,0.1]]],
@@ -557,13 +560,13 @@ const CFG_FIELDS=[
   ['MACD',[['macdF','Fast',2,100,1],['macdS','Slow',3,200,1],['macdG','Signal',2,100,1]]],
   ['Stochastic',[['stK','%K ช่วง',2,100,1],['stD','%D',1,50,1],['stS','Smooth',1,50,1],['stOB','OB',50,99,1],['stOS','OS',1,50,1]]],
   ['ATR',[['atrP','ช่วง',2,100,1]]],
-  ['SMC / ICT',[['swing','Swing (แท่ง)',2,30,1],['obMax','OB สูงสุด/ฝั่ง',1,8,1],['fvgMax','FVG สูงสุด/ฝั่ง',1,10,1],['fvgMin','FVG ขั้นต่ำ ×ATR',0,2,0.05]]]
+  ['SMC / ICT',[['swing','Swing (แท่ง)',2,30,1],['obMax','OB สูงสุด/ฝั่ง',1,8,1],['fvgMax','FVG สูงสุด/ฝั่ง',1,10,1],['fvgMin','FVG ขั้นต่ำ ×ATR',0,2,0.05],['liqMax','Liquidity สูงสุด/ฝั่ง',1,8,1]]]
 ];
 let CFG={...CFG_DEF};
 function cfgClean(o){
   const c={...CFG_DEF};
   for(const [,fs] of CFG_FIELDS)for(const [k,,mn,mx] of fs){const v=+(o&&o[k]);if(o&&o[k]!==''&&o[k]!=null&&isFinite(v))c[k]=Math.min(mx,Math.max(mn,v))}
-  ['ema1','ema2','ema3','bbP','rsiP','macdF','macdS','macdG','stK','stD','stS','atrP','swing','obMax','fvgMax'].forEach(k=>c[k]=Math.round(c[k]));
+  ['ema1','ema2','ema3','bbP','rsiP','macdF','macdS','macdG','stK','stD','stS','atrP','swing','obMax','fvgMax','liqMax'].forEach(k=>c[k]=Math.round(c[k]));
   if(c.macdF>=c.macdS){const t=c.macdF;c.macdF=Math.min(t,c.macdS);c.macdS=Math.max(t,c.macdS+1)}
   if(c.rsiOS>=c.rsiOB){c.rsiOS=CFG_DEF.rsiOS;c.rsiOB=CFG_DEF.rsiOB}
   if(c.stOS>=c.stOB){c.stOS=CFG_DEF.stOS;c.stOB=CFG_DEF.stOB}
@@ -871,7 +874,7 @@ function banner(msg){const b=$('#banner');if(msg){b.textContent=msg;b.classList.
 /* ============ Load + live ============ */
 function recalc(full){
   if(S.cs.length<30)return;
-  S.A=analyze(S.cs);S.A.smc=smcCalc(S.cs,S.A.atrv,CFG.swing);S.A.ict=ictCalc(S.cs,TFSEC[S.tf]);applyData(full);drawLines();render();
+  S.A=analyze(S.cs);S.A.smc=smcCalc(S.cs,S.A.atrv,CFG.swing);S.A.ict=ictCalc(S.cs,TFSEC[S.tf]);S.A.liq=liqCalc(S.cs,S.A.atrv,S.A.smc,S.A.ict);applyData(full);drawLines();render();
 }
 
 async function load(){
@@ -1515,6 +1518,33 @@ function ictCalc(cs,tfs){
   }
   return R;
 }
+/* ============ LIQUIDITY: BSL / SSL + Sweep ============
+   BSL (Buy-side Liquidity)  = Stop/Buy-stop ที่กองอยู่เหนือ High (Swing High, EQH, PDH, PWH)
+   SSL (Sell-side Liquidity) = Stop/Sell-stop ที่กองอยู่ใต้ Low  (Swing Low, EQL, PDL, PWL)
+   Sweep = ราคาวิ่งผ่านระดับนั้นไปแล้ว (กวาดสภาพคล่อง) — rej=true ถ้าแท่งนั้นปิดกลับมาฝั่งเดิม (ไส้กวาดแล้วดีดกลับ) */
+function liqCalc(cs,atr,smc,ict){
+  const n=cs.length,a=atr||1,R={live:[],swept:[],bsl:null,ssl:null,last:null};
+  if(!smc||n<10)return R;
+  const tol=0.15*a,px=cs[n-1].close;
+  const eqIdx=new Set();[...smc.eqh,...smc.eql].forEach(q=>{eqIdx.add(q.i0);eqIdx.add(q.i1)});
+  const all=[];
+  const sweepOf=(isHigh,p,from)=>{for(let j=from;j<n;j++){
+    if(isHigh?cs[j].high>p:cs[j].low<p){const c=cs[j].close;return{j,rej:isHigh?c<=p:c>=p}}}return null};
+  const add=(side,p,i0,name,strong,from)=>all.push({side,p,i0,name,strong,sw:sweepOf(side==='BSL',p,from)});
+  smc.swH.forEach(s=>{const e=eqIdx.has(s.i);add('BSL',s.p,s.i,e?'EQH':'Swing High',e,s.i+1)});
+  smc.swL.forEach(s=>{const e=eqIdx.has(s.i);add('SSL',s.p,s.i,e?'EQL':'Swing Low',e,s.i+1)});
+  if(ict)[['pdh','BSL','PDH'],['pwh','BSL','PWH'],['pdl','SSL','PDL'],['pwl','SSL','PWL']].forEach(([k,side,nm])=>{
+    const o=ict[k];if(o)add(side,o.p,o.i,nm,true,o.i)});
+  const dd=arr=>{const out=[];arr.slice().sort((x,y)=>(y.strong-x.strong)||(y.i0-x.i0)).forEach(x=>{
+    if(!out.some(y=>y.side===x.side&&Math.abs(y.p-x.p)<=tol))out.push(x)});return out};
+  const live=dd(all.filter(x=>!x.sw)),swept=dd(all.filter(x=>x.sw));
+  const near=side=>live.filter(x=>x.side===side).sort((x,y)=>Math.abs(x.p-px)-Math.abs(y.p-px));
+  const b=near('BSL'),s=near('SSL');
+  R.bsl=b[0]||null;R.ssl=s[0]||null;
+  R.live=b.slice(0,CFG.liqMax).concat(s.slice(0,CFG.liqMax));
+  R.swept=swept.sort((x,y)=>y.sw.j-x.sw.j).slice(0,3);
+  R.last=R.swept[0]||null;
+  return R}
 // เวลา Kill Zone ปัจจุบัน/ถัดไป (ตามนาฬิกาจริง)
 const HM_BK=new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',hour12:false,hour:'2-digit',minute:'2-digit'});
 const WD_BK=new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',weekday:'short'});
@@ -1554,6 +1584,13 @@ function drawConcepts(){
   if(ck('#tSmcEq')){
     m.eqh.forEach(q=>hl(q.i0,null,q.p,'#f0a43a',[2,3],'EQH'));
     m.eql.forEach(q=>hl(q.i0,null,q.p,'#4c9be8',[2,3],'EQL'));}
+  if(ck('#tLiq')&&A.liq){const q=A.liq,hh=0.12*(A.atrv||1);
+    q.live.forEach(l=>{const b=l.side==='BSL';
+      box(l.i0,null,l.p+hh,l.p-hh,b?'rgba(255,107,74,.24)':'rgba(47,183,255,.24)',null,null);
+      hl(l.i0,null,l.p,b?'#ff6b4a':'#2fb7ff',[],`${l.side} $ · ${l.name}`,!b)});
+    q.swept.forEach(l=>{const b=l.side==='BSL',c=b?'#ff6b4a':'#2fb7ff';
+      hl(l.i0,l.sw.j,l.p,c+'88',[3,4],`✕ ${l.name}`,!b);
+      box(l.sw.j,l.sw.j,l.p+hh*2,l.p-hh*2,c+'55',c,null)})}
   if(ic){
     if((ck('#tIctKz')||ck('#tIctSb'))&&ic.kzOk){
       ic.zones.forEach(z=>{if((z.kind==='kz'&&!ck('#tIctKz'))||(z.kind==='sb'&&!ck('#tIctSb')))return;
@@ -1579,7 +1616,22 @@ function renderSmc(){
   const row=(k,v)=>`<div class="sr"><span class="mut">${k}</span><span>${v}</span></div>`;
   const sg=t=>`<div class="sg">${t}</div>`;
   const dist=p=>`<span class="${p>px?'dn':'up'}">${p>px?'+':''}${f2(p-px)}</span>`;
-  let h=sg('SMC');
+  let h='';
+  const q=A.liq;
+  if(q){
+    h+=sg('LIQUIDITY');
+    const lr=x=>x?`${f2(x.p)} ${dist(x.p)} <span class="mut">${x.name}</span>`:'<span class="mut">–</span>';
+    h+=row('BSL ใกล้สุด (เหนือราคา)',lr(q.bsl));
+    h+=row('SSL ใกล้สุด (ใต้ราคา)',lr(q.ssl));
+    if(q.last){const l=q.last,hi=l.side==='BSL',ag=n-1-l.sw.j;
+      h+=row('กวาดล่าสุด',`${hi?'BSL':'SSL'} ${f2(l.p)} <span class="mut">${l.name} · ${ag} แท่งก่อน${l.sw.rej?' · ปิดกลับ':' · ปิดทะลุ'}</span>`);
+      let t;
+      if(!l.sw.rej)t=`ราคา<b>ปิดทะลุ</b>${hi?'เหนือ':'ใต้'}ระดับนี้ — อาจเป็นการเบรกจริงมากกว่าแค่กวาด ควรรอดูแท่งถัดไป`;
+      else if(hi)t=`Buy-stop เหนือ High ถูกกวาดแล้วราคาปิดกลับ → ตามแนวคิด SMC ฝั่งซื้อที่เข้าตามเบรกอาจติดกับ ${m.trend===-1?'<b class="dn">สอดคล้องโครงสร้าง Bearish</b> (มองหา Sell ตาม LB/สัญญาณ TF เล็ก)':m.trend===1?'<b class="warn">สวนโครงสร้าง Bullish</b> น้ำหนักน้อยลง':''}`;
+      else t=`Sell-stop ใต้ Low ถูกกวาดแล้วราคาปิดกลับ → ตามแนวคิด SMC ฝั่งขายที่เข้าตามเบรกอาจติดกับ ${m.trend===1?'<b class="up">สอดคล้องโครงสร้าง Bullish</b> (มองหา Buy ตาม LB/สัญญาณ TF เล็ก)':m.trend===-1?'<b class="warn">สวนโครงสร้าง Bearish</b> น้ำหนักน้อยลง':''}`;
+      h+=`<div class="note" style="margin:4px 0;color:var(--txt)">🧲 ${t}</div>`}
+    h+='<div class="note" style="margin:4px 0">BSL = สภาพคล่องฝั่งซื้อ (Stop เหนือ High/EQH/PDH/PWH) · SSL = ฝั่งขาย (ใต้ Low/EQL/PDL/PWL) · แถบทึบ = ยังไม่ถูกกวาด · เส้นประจาง + ✕ = ถูกกวาดแล้ว · เป็นเครื่องมืออ่านโครงสร้าง ไม่ใช่สัญญาณซื้อขาย</div>'}
+  h+=sg('SMC');
   if(!m.ev.length)h+=row('โครงสร้างตลาด','<span class="mut">ข้อมูลยังไม่พอ</span>');
   else{const l=m.ev[m.ev.length-1];
     h+=row('โครงสร้างตลาด',(m.trend===1?'<b class="up">Bullish ▲</b>':'<b class="dn">Bearish ▼</b>'));
@@ -1621,8 +1673,8 @@ function renderSmc(){
 }
 
 /* ============ ตั้งค่าอินดิเคเตอร์ / แผงล่าง / ตัวเลือก SMC-ICT ============ */
-const NEWTG=['#tPrsi','#tPmacd','#tPstoch','#tSmcStruct','#tSmcOb','#tSmcFvg','#tSmcEq','#tSmcPd','#tIctKz','#tIctSb','#tIctLv','#tIctOte'];
-const TG_DEF={'#tPrsi':true,'#tPmacd':true,'#tPstoch':true};
+const NEWTG=['#tPrsi','#tPmacd','#tPstoch','#tSmcStruct','#tSmcOb','#tSmcFvg','#tSmcEq','#tSmcPd','#tIctKz','#tIctSb','#tIctLv','#tIctOte','#tLiq'];
+const TG_DEF={'#tPrsi':true,'#tPmacd':true,'#tPstoch':true,'#tLiq':true};
 function loadTg(){let o={};try{o=JSON.parse(localStorage.getItem('goldTg')||'{}')}catch(e){}
   NEWTG.forEach(id=>{$(id).checked=(id in o)?!!o[id]:!!TG_DEF[id]})}
 function saveTg(){const o={};NEWTG.forEach(id=>o[id]=$(id).checked);try{localStorage.setItem('goldTg',JSON.stringify(o))}catch(e){}}
