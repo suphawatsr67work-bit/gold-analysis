@@ -885,7 +885,7 @@ async function load(){
     if(my!==S.seq)return;
     S.cs=cs;recalc(true);if(wlAdd())renderWl();if(ORD.auto!==false){autoPlan();drawLines();renderOrd()}
     const n=cs.length;chMain.timeScale().setVisibleLogicalRange({from:n-(MOB()?44:110),to:n+(MOB()?26:54)});
-    connectWs();loadMtf();
+    connectWs();loadMtf();loadLtf();
   }catch(e){
     if(my!==S.seq)return;
     if(S.src==='fut'){
@@ -939,7 +939,19 @@ async function loadMtf(){
   }catch(e){}
   if(typeof renderView==='function'&&S.A)renderView();
 }
-setInterval(()=>{if(S.cs.length)loadMtf()},60000);
+// Timeframe เล็ก 5m/15m สำหรับเช็กลิสต์ข้อ ⑤ (โหลดแยกจาก MTF เดิม)
+async function loadLtf(){
+  const my=S.seq;
+  try{
+    const res=await Promise.all(['5m','15m'].map(tf=>klines(S.src,tf,300).then(cs=>({tf,cs}))));
+    if(my!==S.seq)return;
+    const o={};
+    res.forEach(({tf,cs})=>{if(cs.length>=2*CFG.swing+6){const A=analyze(cs);o[tf]={cs,smc:smcCalc(cs,A.atrv,CFG.swing)}}});
+    S.ltf=o;
+  }catch(e){}
+  if(S.A&&typeof renderSmc==='function')renderSmc();
+}
+setInterval(()=>{if(S.cs.length){loadMtf();loadLtf()}},60000);
 
 
 /* ============ Options volume by strike ============ */
@@ -1667,9 +1679,20 @@ function renderSmc(){
       h+=row(`② กวาด ${want} ภายใน 30 แท่ง`,rec?ok(`${rec.name} ${f2(rec.p)} <span class="mut">(${n-1-rec.sw.j===0?'แท่งปัจจุบัน ยังไม่ปิด — ผลอาจเปลี่ยน':(n-1-rec.sw.j)+' แท่งก่อน'})</span>`):no('ยังไม่เกิด'));
       h+=row('③ ปิดกลับหลังกวาด',rec?(rec.sw.rej?ok('ปิดกลับ'):no('ปิดทะลุ (อาจเป็นเบรกจริง)')):no('–'));
       h+=row('④ มี Liquidity Block',lb?ok(`${f2(lb.bot)}–${f2(lb.top)}${px>=lb.bot&&px<=lb.top?' <b class="warn">(ราคาอยู่ในกล่อง)</b>':''}`):no('ยังไม่มี'));
-      h+=row('⑤ สัญญาณ 5–15 นาที',`<span class="mut">ต้องดูเอง (หน้านี้ไม่ตรวจ)</span>`);
-      const cnt=[1,!!rec,!!(rec&&rec.sw.rej),!!lb].filter(Boolean).length;
-      h+=`<div class="note" style="margin:4px 0;color:var(--txt)">${cnt===4?'ครบ ①–④ ตามคลิป — เหลือยืนยันใน Timeframe เล็ก (⑤)':`ยังไม่ครบ (${cnt}/4) — ตามคลิปคือรอก่อน`} · ไม่ใช่สัญญาณซื้อขาย</div>`}}
+      // ⑤ Timeframe เล็ก (5m/15m): หลังแท่งที่กวาด ต้องมีการเบรกโครงสร้าง (BOS/CHoCH) ไปทางเดียวกับทิศทางใหญ่ = ราคาหลุด High/Low ภายในแล้ว
+      let c5=false;
+      if(!rec)h+=row('⑤ ยืนยัน 5–15 นาที',no('–'));
+      else if(!S.ltf)h+=row('⑤ ยืนยัน 5–15 นาที','<span class="mut">กำลังโหลดข้อมูล…</span>');
+      else{
+        const t0=S.cs[rec.sw.j].time,dw=m.trend,parts=['5m','15m'].map(tf=>{
+          const L=S.ltf[tf];if(!L)return `<span class="mut">${TFN[tf]}: –</span>`;
+          if(L.cs[0].time>t0)return `<span class="mut">${TFN[tf]}: นอกช่วงข้อมูล</span>`;
+          const ev=L.smc.ev.filter(e=>e.dir===dw&&L.cs[e.i1].time>=t0).slice(-1)[0];
+          if(!ev)return `<span class="mut">${TFN[tf]}: ✗ ยังไม่เบรก</span>`;
+          c5=true;return `<b class="up">✓</b> ${TFN[tf]}: ${ev.type} ${dw===-1?'↓':'↑'} ${f2(ev.p)} <span class="mut">(${L.cs.length-1-ev.i1} แท่งก่อน)</span>`});
+        h+=row('⑤ ยืนยัน 5–15 นาที',parts.join('<br>'))}
+      const cnt=[1,!!rec,!!(rec&&rec.sw.rej),!!lb,c5].filter(Boolean).length;
+      h+=`<div class="note" style="margin:4px 0;color:var(--txt)">${cnt===5?'ครบ ①–⑤ ตามกฎคลิป — ยังต้องตัดสินใจเอง (Stop Loss ขนาดสัญญา ความเสี่ยง)':`ยังไม่ครบ (${cnt}/5) — ตามคลิปคือรอก่อน`} · ไม่ใช่สัญญาณซื้อขาย</div>`}}
   h+=sg('SMC');
   if(!m.ev.length)h+=row('โครงสร้างตลาด','<span class="mut">ข้อมูลยังไม่พอ</span>');
   else{const l=m.ev[m.ev.length-1];
