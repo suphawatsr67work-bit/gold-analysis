@@ -327,6 +327,11 @@ i.vd.u{background:var(--up)} i.vd.d{background:var(--dn)}
 }
 .omode{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 8px;font-size:12.5px}.omode button{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer;font:inherit}.omode button.on{background:var(--gold,#e6b94c);color:#111;border-color:transparent;font-weight:700}
 .optD{scroll-margin-top:64px}
+
+.rkrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--line);font-size:12px}
+.rkrow button{padding:3px 8px;font-size:11.5px}
+.rkh{font-size:12.5px;font-weight:700;margin:14px 0 4px;color:var(--txt)}
+#riskCard button:disabled{opacity:.45;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -491,6 +496,30 @@ i.vd.u{background:var(--up)} i.vd.d{background:var(--dn)}
           </div>
           <div id="ordOut"></div>
           <div class="note">เป็นเครื่องมือวางแผนและวาดเส้นเท่านั้น <b>ไม่ได้ส่งออเดอร์ไปยังโบรกเกอร์</b> — ต้องไปตั้ง Entry/SL/TP ในแพลตฟอร์มเทรด (เช่น MT5) เอง · คำนวณ 1 Lot = 100 ออนซ์ (1.00 ในราคา = $100 ต่อ Lot) ตรวจสเปคสัญญากับโบรกเกอร์อีกครั้ง</div>
+        </div>
+        <div class="card" id="riskCard" data-col>
+          <h3>ศูนย์คุมความเสี่ยง <span class="mut">· Lot · PASS/BLOCK · Time Machine</span></h3>
+          <div class="ord">
+            <label>เงินทุน ($)<input type="number" id="rkCap" min="1" step="1"></label>
+            <label>ขาดทุนสูงสุดต่อไม้ ($)<input type="number" id="rkLoss" min="0.5" step="0.5"></label>
+            <label>ขาดทุนสูงสุดต่อวัน ($)<input type="number" id="rkDay" min="1" step="1"></label>
+            <label>จำนวนไม้สูงสุดต่อวัน<input type="number" id="rkTr" min="1" step="1"></label>
+            <label>Reward:Risk ขั้นต่ำ (1 : x)<input type="number" id="rkRR" min="0.5" step="0.1"></label>
+            <label>Lot สูงสุด<input type="number" id="rkMaxLot" min="0.01" step="0.01"></label>
+          </div>
+          <div class="note">1 lot = 100 oz → ราคาขยับ 1 จุด = 100 $ ต่อ 1 lot (ตรงกับตัวคำนวณใน Order planner) · ตัวเลขทั้งหมดเก็บในเครื่องนี้เท่านั้น</div>
+          <div id="rkOut"></div>
+          <div class="rkh">สถิติไม้วันนี้ <span class="mut" style="font-weight:400">· นับวันตามเวลาไทย</span></div>
+          <div id="rkDayOut"></div>
+          <div class="rkh">Time Machine <span class="mut" style="font-weight:400">· จำลองผลของออเดอร์ที่ตั้งไว้ 10,000 รอบ</span></div>
+          <div class="ord">
+            <label>ออเดอร์<select id="rkTmOrd"></select></label>
+            <label>ช่วงเวลาที่จำลอง (ชม.)<input type="number" id="rkHours" min="1" max="48" step="1" value="8"></label>
+            <label>Seed (ผลเหมือนเดิมเมื่อ seed เท่าเดิม)<input type="number" id="rkSeed" step="1" value="19"></label>
+            <label style="justify-content:flex-end"><button id="rkTmGo">รันจำลอง 10,000 รอบ</button></label>
+          </div>
+          <div id="rkTmOut"></div>
+          <div class="note">เป็นเครื่องมือคำนวณและจำลองเพื่อการศึกษา <b>ไม่ใช่คำแนะนำการลงทุน</b> และไม่ส่งออเดอร์ใดๆ · การผ่านเกณฑ์ (PASS) แปลว่าไม่ผิดกฎที่ตั้งไว้ ไม่ได้แปลว่าไม้นั้นจะได้กำไร · ปรับจาก Day Trader skill (MIT) ของ Jake Schincariol</div>
         </div>
     </div>
     <div class="tabpane" id="t2">
@@ -1105,7 +1134,7 @@ function renderOrd(){
   if(act!==$('#ordRR'))$('#ordRR').value=ORD.rr;
   $('#ordSrc').value=ORD.src;
   const L=ordList();
-  if(!L.length){out.innerHTML='<div class="note">ยังไม่มีออเดอร์บนกราฟ — กด "ใช้แผน…" ด้านบน หรือกรอก Entry / SL / TP เอง</div>';$('#ordType').textContent='--';return}
+  if(!L.length){out.innerHTML='<div class="note">ยังไม่มีออเดอร์บนกราฟ — กด "ใช้แผน…" ด้านบน หรือกรอก Entry / SL / TP เอง</div>';$('#ordType').textContent='--';try{riskRender()}catch(e){}return}
   const walls=ORD.auto&&ORD.src==='walls'&&ORD.list&&ORD.list.length;
   $('#ordType').textContent=walls?'Put/Call Wall':'--';
   const px=S.A?S.A.px:null,atr=S.A?S.A.atrv:1;
@@ -1116,6 +1145,7 @@ function renderOrd(){
     note=`<div class="note" style="margin:6px 0 0">${note}</div>`;
   }
   out.innerHTML=note+L.map(o=>ordBlock(o,px,ORD.lot,atr)).join('');
+  try{riskRender()}catch(e){}
 }
 function wallOrders(){
   if(!OPT.rows.length)return null;
@@ -1164,6 +1194,215 @@ function bindOrd(){
   if(ORD.entry){$('#ordEntry').value=ORD.entry;$('#ordSl').value=ORD.sl;$('#ordTp').value=ORD.tp}
   $('#ordAuto').checked=ORD.auto!==false;
   renderOrd();
+}
+
+/*RK-CORE-START*/
+/* ============ Risk Desk: คำนวณล้วน (ปรับจาก Day Trader skill — MIT, Jake Schincariol) ============ */
+const RK={OZ:100,STEP:0.01,
+  DEF:{cap:1000,maxLoss:10,maxDay:30,maxTrades:3,minRR:1.5,maxLot:1}};
+RK.clean=function(o){
+  const d=RK.DEF,c={};
+  for(const k of Object.keys(d)){const v=+(o&&o[k]);c[k]=(o&&o[k]!==''&&o[k]!=null&&isFinite(v)&&v>0)?v:d[k]}
+  c.maxTrades=Math.max(1,Math.round(c.maxTrades));
+  return c};
+RK.r2=x=>Math.round(x*100)/100;
+/* ขนาด lot จากระยะ SL: ปัดลงเป็นหลัก 0.01 เสมอ, เลือกค่าที่น้อยที่สุดของ 2 เพดาน */
+RK.size=function(cfg,entry,sl){
+  const risk=Math.abs(entry-sl);
+  if(!(risk>0))return{lot:0,risk:0,reason:'ยังไม่มีระยะ SL'};
+  const byLoss=cfg.maxLoss/(risk*RK.OZ),byCap=cfg.maxLot;
+  const raw=Math.min(byLoss,byCap),lot=Math.floor(raw/RK.STEP+1e-9)*RK.STEP;
+  const L=RK.r2(lot);
+  if(L<RK.STEP)return{lot:0,risk,byLoss,byCap,reason:`SL ห่าง ${RK.r2(risk)} จุด — แม้ 0.01 lot ก็เสีย ${RK.r2(RK.STEP*risk*RK.OZ)} $ เกินขาดทุนสูงสุดต่อไม้ ${cfg.maxLoss} $ (ต้องขยับ SL เข้าใกล้ หรือเพิ่มขาดทุนสูงสุดเอง)`};
+  return{lot:L,risk,byLoss,byCap,maxLossAt:RK.r2(L*risk*RK.OZ),decided:byLoss<=byCap?'ขาดทุนสูงสุดต่อไม้':'Lot สูงสุด'}};
+/* ตรวจออเดอร์ 1 ใบ → PASS / BLOCK พร้อมเหตุผล */
+RK.check=function(cfg,o,lot,ctx){
+  ctx=ctx||{};const day=ctx.day||{trades:0,riskUsed:0};
+  const buy=o.side==='BUY',blocks=[],warns=[];
+  const ok=buy?(o.sl<o.entry&&o.entry<o.tp):(o.tp<o.entry&&o.entry<o.sl);
+  if(!(o.sl>0)||!(o.entry>0))blocks.push('ต้องมี Entry และ Stop Loss ก่อน (ห้ามเข้าโดยไม่มี SL)');
+  else if(!ok)blocks.push(buy?'ลำดับราคาไม่ถูกต้อง: BUY ต้อง SL < Entry < TP':'ลำดับราคาไม่ถูกต้อง: SELL ต้อง TP < Entry < SL');
+  let eff=o.entry;
+  if(ctx.px!=null&&Math.abs(o.entry-ctx.px)<=Math.max(0.3,(ctx.atr||1)*0.05))eff=buy?Math.max(o.entry,ctx.px):Math.min(o.entry,ctx.px); // ออเดอร์ Market วัดจากราคาที่แย่กว่า
+  const risk=Math.abs(eff-o.sl),rew=Math.abs(o.tp-eff),rr=risk>0?rew/risk:0;
+  const loss=RK.r2(lot*risk*RK.OZ);
+  if(!ok||!(risk>0))return{verdict:'BLOCK',blocks,warns,risk,rew,rr,loss,eff};
+  if(!(lot>=RK.STEP-1e-9))blocks.push('Lot ต้องไม่น้อยกว่า 0.01');
+  if(lot>cfg.maxLot+1e-9)blocks.push(`Lot ${lot} เกิน Lot สูงสุด ${cfg.maxLot}`);
+  if(risk<eff*0.0005)blocks.push(`SL ห่างแค่ ${RK.r2(risk)} จุด (น้อยกว่า 0.05% ของราคา) — แคบเกินไป โดน spread/สวิงปกติเตะออกง่าย`);
+  if(loss>cfg.maxLoss+1e-9)blocks.push(`ขาดทุนที่ SL = ${lot} lot × ${RK.r2(risk)} จุด × ${RK.OZ} = ${loss} $ เกินขาดทุนสูงสุดต่อไม้ ${cfg.maxLoss} $`);
+  if(rr+1e-9<cfg.minRR)blocks.push(`Reward:Risk 1:${rr.toFixed(2)} ต่ำกว่าขั้นต่ำ 1:${cfg.minRR}`);
+  if(day.trades>=cfg.maxTrades)blocks.push(`วันนี้เข้าไปแล้ว ${day.trades} ไม้ (สูงสุด ${cfg.maxTrades} ไม้/วัน)`);
+  if(day.riskUsed+loss>cfg.maxDay+1e-9)blocks.push(`ความเสี่ยงวันนี้ ${RK.r2(day.riskUsed)} $ + ไม้นี้ ${loss} $ เกินขาดทุนสูงสุดต่อวัน ${cfg.maxDay} $`);
+  if(Math.abs(eff-o.entry)>=0.01)warns.push(`วัดความเสี่ยงจากราคาตลาด ${RK.r2(eff)} (แย่กว่า Entry ที่ตั้ง)`);
+  if(cfg.cap&&loss>cfg.cap*0.03)warns.push(`เสี่ยง ${(loss/cfg.cap*100).toFixed(1)}% ของเงินทุนในไม้เดียว (เกิน 3%)`);
+  return{verdict:blocks.length?'BLOCK':'PASS',blocks,warns,risk,rew,rr,loss,eff}};
+/* ตัวสุ่มซ้ำได้ (seed เดียวกัน ผลเหมือนเดิม) */
+RK.rng=function(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}};
+RK.hourOf=t=>Math.floor(t/3600)%24;
+/* Time Machine ส่วนที่ 1: สร้างรอบวันที่เหลือ N ครั้งจากแท่ง 5 นาทีของทองเอง (สุ่มแท่งจากชั่วโมงเดียวกันของวัน) */
+RK.mc=function(bars,p){
+  const n=bars.length;if(n<200)return{err:'ข้อมูลแท่ง 5 นาทีไม่พอ (ต้องการ ≥ 200 แท่ง)'};
+  const pools=Array.from({length:24},()=>[]),all=[];
+  for(let i=0;i<n;i++){const b=bars[i];if(!(b.open>0))continue;
+    const r={h:Math.max(0,(b.high-b.open)/b.open),l:Math.min(0,(b.low-b.open)/b.open),c:(b.close-b.open)/b.open};
+    pools[RK.hourOf(b.time)].push(r);all.push({...r})}
+  /* ตัดแนวโน้มเฉลี่ยของแต่ละกอง (ข้อมูลแค่ไม่กี่วัน ถ้าไม่ตัด แนวโน้มที่บังเอิญเกิดจะถูกเสกซ้ำ) — เก็บเฉพาะรูปทรงความผันผวนของแต่ละชั่วโมง */
+  const demean=a=>{if(!a.length)return;const m=a.reduce((s,x)=>s+x.c,0)/a.length;for(const x of a){x.c-=m;x.h=Math.max(x.h,x.c);x.l=Math.min(x.l,x.c)}};
+  pools.forEach(demean);demean(all);
+  const rnd=RK.rng(p.seed),buy=p.side==='BUY',risk=Math.abs(p.entry-p.sl),rew=Math.abs(p.tp-p.entry);
+  const t0=bars[n-1].time+300,steps=Math.round(p.hours*12);
+  const market=Math.abs(p.entry-p.px)<=p.tol;
+  const cnt={tp:0,sl:0,open:0,nofill:0};let sumR=0,filled=0;const endR=[];
+  for(let k=0;k<p.runs;k++){
+    let px=p.px,fl=market,res='open',R=0;
+    for(let i=0;i<steps;i++){
+      const pool=pools[RK.hourOf(t0+300*i)],src=pool.length>=20?pool:all,r=src[Math.floor(rnd()*src.length)];
+      const o=px,h=o*(1+r.h),l=o*(1+r.l),c=o*(1+r.c);
+      if(!fl){if(l<=p.entry&&h>=p.entry)fl=true;px=c;continue} // แท่งที่เข้า Entry ยังไม่ตัดสิน SL/TP (เหมือน Order planner)
+      const hs=buy?l<=p.sl:h>=p.sl,ht=buy?h>=p.tp:l<=p.tp;
+      if(hs){res='sl';break}   // ถ้าชนทั้ง SL และ TP ในแท่งเดียว นับว่า SL ก่อน (ระวังไว้ก่อน)
+      if(ht){res='tp';break}
+      px=c}
+    if(!fl){cnt.nofill++;continue}
+    filled++;
+    if(res==='tp'){cnt.tp++;R=rew/risk}else if(res==='sl'){cnt.sl++;R=-1}
+    else{cnt.open++;R=(buy?px-p.entry:p.entry-px)/risk;endR.push(R)}
+    sumR+=R}
+  return{runs:p.runs,steps,filled,cnt,evR:filled?sumR/filled:0,
+    pTP:filled?cnt.tp/filled:0,pSL:filled?cnt.sl/filled:0,pOpen:filled?cnt.open/filled:0,pNoFill:cnt.nofill/p.runs,
+    be:1/(1+rew/risk)}};
+/* Time Machine ส่วนที่ 2: ใช้กฎเดียวกัน (ระยะ SL/TP เท่าเดิม) กับทุกจุดเริ่มในอดีตจริง เข้าที่ราคาปิดของแท่งนั้น */
+RK.replay=function(bars,p){
+  const n=bars.length,steps=Math.round(p.hours*12),buy=p.side==='BUY';
+  const risk=Math.abs(p.entry-p.sl),rew=Math.abs(p.tp-p.entry);
+  const cnt={tp:0,sl:0,open:0};let sumR=0,tot=0;
+  for(let s=0;s+steps<n;s++){
+    const e=bars[s].close,sl=buy?e-risk:e+risk,tp=buy?e+rew:e-rew;let res='open',R=0,last=e;
+    for(let i=s+1;i<=s+steps;i++){const b=bars[i];last=b.close;
+      const hs=buy?b.low<=sl:b.high>=sl,ht=buy?b.high>=tp:b.low<=tp;
+      if(hs){res='sl';break}if(ht){res='tp';break}}
+    if(res==='tp'){cnt.tp++;R=rew/risk}else if(res==='sl'){cnt.sl++;R=-1}else{cnt.open++;R=(buy?last-e:e-last)/risk}
+    sumR+=R;tot++}
+  return{tot,cnt,evR:tot?sumR/tot:0,indep:Math.max(1,Math.floor(tot/steps)),
+    pTP:tot?cnt.tp/tot:0,pSL:tot?cnt.sl/tot:0,pOpen:tot?cnt.open/tot:0}};
+RK.verdict=function(mc,rp){
+  const ev=mc.evR,ev2=rp.tot?rp.evR:null;
+  if(mc.filled<mc.runs*0.2)return{cls:'warn',t:'ราคามีโอกาสน้อยที่จะแตะ Entry ในช่วงเวลานี้ — ผลจำลองยังสรุปไม่ได้'};
+  if(ev>=0.1&&(ev2==null||ev2>0))return{cls:'up',t:`เอนเข้าข้างแผนนี้ในการจำลอง (EV ${ev>=0?'+':''}${ev.toFixed(2)}R) แต่ไม่ใช่การพยากรณ์ — ตัวเลขนี้ยังไม่รวม spread/ค่าคอม`};
+  if(ev<=-0.1||(ev2!=null&&ev2<=-0.1&&ev<0.1))return{cls:'dn',t:`เสียเปรียบในการจำลอง (EV ${ev.toFixed(2)}R) — ลองปรับ SL/TP ให้สมเหตุสมผลกับความผันผวน หรือรอจังหวะที่ดีกว่า`};
+  return{cls:'warn',t:`ใกล้เคียงโยนเหรียญ (EV ${ev>=0?'+':''}${ev.toFixed(2)}R) — ไม่มีความได้เปรียบชัดเจนจากการจำลอง ผลจริงขึ้นกับจังหวะและวินัย`}};
+/* สถิติจากบันทึกไม้ */
+RK.dayKey=function(d){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok'}).format(d||new Date())};
+RK.dayStats=function(log,key){
+  const t=log.filter(x=>x.day===key);
+  const riskUsed=t.reduce((a,x)=>a+x.maxLoss,0);
+  const closed=t.filter(x=>x.res);
+  return{trades:t.length,riskUsed:RK.r2(riskUsed),pl:RK.r2(closed.reduce((a,x)=>a+x.pl,0)),open:t.length-closed.length,list:t}};
+RK.allStats=function(log){
+  const c=log.filter(x=>x.res),w=c.filter(x=>x.res==='tp');
+  const pl=c.reduce((a,x)=>a+x.pl,0),R=c.reduce((a,x)=>a+(x.res==='tp'?x.rr:-1),0);
+  return{n:c.length,wins:w.length,win:c.length?w.length/c.length:0,pl:RK.r2(pl),avgR:c.length?R/c.length:0}};
+/*RK-CORE-END*/
+/* ============ Risk Desk: ส่วนเชื่อมกับหน้าเว็บ (ปรับจาก Day Trader skill) ============ */
+let RKC=RK.clean(null);try{RKC=RK.clean(JSON.parse(localStorage.getItem('goldRiskCfg')||'{}'))}catch(e){}
+let RKLOG=[];try{const a=JSON.parse(localStorage.getItem('goldRiskLog')||'[]');if(Array.isArray(a))RKLOG=a}catch(e){}
+const rkSaveLog=()=>{try{localStorage.setItem('goldRiskLog',JSON.stringify(RKLOG.slice(-300)))}catch(e){}};
+const rkSaveCfg=()=>{try{localStorage.setItem('goldRiskCfg',JSON.stringify(RKC))}catch(e){}};
+const RK_FIELDS=[['rkCap','cap'],['rkLoss','maxLoss'],['rkDay','maxDay'],['rkTr','maxTrades'],['rkRR','minRR'],['rkMaxLot','maxLot']];
+const rkFill=()=>RK_FIELDS.forEach(([id,k])=>{const e=$('#'+id);if(e)e.value=RKC[k]});
+function rkReset(){RKC=RK.clean(null);rkFill();riskRender()}
+const rkUsd=x=>(x<0?'−':'')+f2(Math.abs(x))+' $';
+function rkCtx(){return{day:RK.dayStats(RKLOG,RK.dayKey()),key:RK.dayKey(),px:S.A?S.A.px:null,atr:S.A?S.A.atrv:1}}
+function rkTmSel(L){
+  const sel=$('#rkTmOrd');if(!sel)return;
+  const want=L.map((o,i)=>`<option value="${i}">${o.side}${o.tag?' '+o.tag:''} @ ${f2(o.entry)}</option>`).join('');
+  if(sel.dataset.sig!==want){const keep=sel.value;sel.innerHTML=want;sel.dataset.sig=want;if(keep&&+keep<L.length)sel.value=keep}}
+function riskRender(){
+  const el=$('#rkOut');if(!el)return;
+  const L=ordList(),ctx=rkCtx();
+  rkTmSel(L);rkDayRender(ctx);
+  if(!L.length){el.innerHTML='<div class="note">ยังไม่มีออเดอร์ — ตั้งออเดอร์ด้านบนก่อน (กด "ใช้แผน…" หรือกรอก Entry / SL / TP) ระบบจะคำนวณ Lot และเช็กความเสี่ยงให้ทันที</div>';return}
+  el.innerHTML=L.map((o,i)=>{
+    const c=RK.check(RKC,o,ORD.lot,ctx),sz=RK.size(RKC,c.eff,o.sl),pass=c.verdict==='PASS';
+    const head=`<span class="badge ${o.side==='BUY'?'b-up':'b-dn'}" style="font-size:11px">${o.side}</span> <b>${o.tag||'Entry'}</b> <span class="mut">@ ${f2(o.entry)}</span>`;
+    const szTxt=sz.lot>0?`<b class="up">${sz.lot.toFixed(2)} lot</b><span class="mut" style="font-size:11px;font-weight:400">ขาดทุนที่ SL ≈ ${rkUsd(sz.maxLossAt)} · จำกัดโดย: ${sz.decided}</span>`:`<b class="dn">เข้าไม่ได้</b><span class="mut" style="font-size:11px;font-weight:400">${sz.reason||''}</span>`;
+    const why=c.blocks.map(b=>`<div class="dn" style="font-size:12px;margin-top:3px">• ${b}</div>`).join('')+c.warns.map(w=>`<div class="warn" style="font-size:12px;margin-top:3px">• ${w}</div>`).join('');
+    return `<div style="margin-top:10px">${head}
+      <div class="kv"><div>Lot ที่แนะนำ${szTxt}</div>
+      <div>เช็กที่ ${ORD.lot.toFixed(2)} lot<b class="${pass?'up':'dn'}">${c.verdict}${c.risk>0?` · เสี่ยง ${rkUsd(c.loss)} · 1:${c.rr.toFixed(2)}`:''}</b></div></div>
+      ${why}
+      <div class="ctl" style="margin-top:6px"><button data-rk="lot" data-i="${i}"${sz.lot>0?'':' disabled'}>ใช้ ${sz.lot>0?sz.lot.toFixed(2):'--'} lot</button><button data-rk="log" data-i="${i}"${pass?'':' disabled'}>บันทึกไม้นี้ (นับเข้าสถิติวันนี้)</button></div></div>`}).join('');
+}
+function rkDayRender(ctx){
+  const el=$('#rkDayOut');if(!el)return;
+  const d=ctx.day,al=RK.allStats(RKLOG);
+  const stop=d.pl<=-RKC.maxDay?`<div class="dn" style="font-size:12.5px;margin-bottom:6px">ขาดทุนวันนี้ถึงเพดาน ${RKC.maxDay} $ แล้ว — หยุดเทรดวันนี้ตามกฎที่ตั้งไว้</div>`:'';
+  const rows=d.list.map(x=>{
+    const tm=new Intl.DateTimeFormat('th-TH',{timeZone:'Asia/Bangkok',hour12:false,hour:'2-digit',minute:'2-digit'}).format(new Date(x.t));
+    const st=x.res==='tp'?`<b class="up">TP ${rkUsd(x.pl)}</b>`:x.res==='sl'?`<b class="dn">SL ${rkUsd(x.pl)}</b>`:'<span class="warn">ยังเปิดอยู่</span>';
+    const btn=x.res?'':`<button data-rk="tp" data-id="${x.id}">ชน TP</button><button data-rk="sl" data-id="${x.id}">ชน SL</button>`;
+    return `<div class="rkrow"><span class="mut">${tm}</span><span>${x.side} ${x.tag?x.tag+' ':''}${x.lot.toFixed(2)} lot @ ${f2(x.entry)}</span><span class="mut">เสี่ยง ${rkUsd(x.maxLoss)}</span>${st}${btn}<button data-rk="del" data-id="${x.id}" title="ลบรายการนี้">ลบ</button></div>`}).join('');
+  el.innerHTML=stop+`<div class="kv">
+    <div>ไม้วันนี้<b>${d.trades} / ${RKC.maxTrades}</b></div>
+    <div>ความเสี่ยงที่ใช้ไป<b>${rkUsd(d.riskUsed)} / ${RKC.maxDay} $</b></div>
+    <div>กำไร/ขาดทุนที่ปิดแล้ว<b class="${d.pl>=0?'up':'dn'}">${d.pl>0?'+':''}${rkUsd(d.pl)}</b></div>
+    <div>ทุกวันที่บันทึก<b>${al.n?`${al.n} ไม้ · ชนะ ${(al.win*100).toFixed(0)}% · เฉลี่ย ${al.avgR>=0?'+':''}${al.avgR.toFixed(2)}R · รวม ${al.pl>0?'+':''}${rkUsd(al.pl)}`:'ยังไม่มีไม้ที่ปิด'}</b></div></div>`+
+    (rows?`<div style="margin-top:6px">${rows}</div>`:'<div class="note">ยังไม่มีไม้ที่บันทึกวันนี้</div>')+
+    (RKLOG.length?`<div class="ctl" style="margin-top:6px"><button data-rk="clear">ล้างสถิติทั้งหมด</button></div>`:'');
+}
+function rkAct(e){
+  const b=e.target.closest('[data-rk]');if(!b||b.disabled)return;
+  const a=b.dataset.rk,L=ordList(),ctx=rkCtx();
+  if(a==='lot'){const o=L[+b.dataset.i];if(!o)return;const c=RK.check(RKC,o,ORD.lot,ctx),sz=RK.size(RKC,c.eff,o.sl);
+    if(sz.lot>0){ORD.lot=sz.lot;saveOrd();const e2=$('#ordLot');if(e2)e2.value=ORD.lot;drawLines();renderOrd()}return}
+  if(a==='log'){const o=L[+b.dataset.i];if(!o)return;const c=RK.check(RKC,o,ORD.lot,ctx);if(c.verdict!=='PASS')return;
+    const dup=ctx.day.list.some(x=>x.side===o.side&&x.entry===o.entry&&x.sl===o.sl&&x.tp===o.tp);
+    if(dup){const el=$('#rkOut');el.insertAdjacentHTML('afterbegin','<div class="warn" style="font-size:12.5px;margin-top:8px">บันทึกออเดอร์เดียวกันนี้ไปแล้ววันนี้ (กันบันทึกซ้ำ)</div>');return}
+    RKLOG.push({id:Date.now(),t:Date.now(),day:ctx.key,side:o.side,tag:o.tag||'',lot:ORD.lot,entry:o.entry,sl:o.sl,tp:o.tp,maxLoss:c.loss,rr:c.rr,plSl:-c.loss,plTp:RK.r2(ORD.lot*c.rew*RK.OZ),res:null,pl:0});
+    rkSaveLog();riskRender();return}
+  const id=+b.dataset.id,x=RKLOG.find(r=>r.id===id);
+  if(a==='tp'&&x){x.res='tp';x.pl=x.plTp}
+  else if(a==='sl'&&x){x.res='sl';x.pl=x.plSl}
+  else if(a==='del'){RKLOG=RKLOG.filter(r=>r.id!==id)}
+  else if(a==='clear'){if(!confirm('ล้างสถิติไม้ที่บันทึกไว้ทั้งหมดในเครื่องนี้?'))return;RKLOG=[]}
+  rkSaveLog();riskRender();
+}
+async function rkRunTM(){
+  const out=$('#rkTmOut'),L=ordList();
+  if(!L.length){out.innerHTML='<div class="warn" style="font-size:12.5px;margin-top:8px">ยังไม่มีออเดอร์ให้จำลอง — ตั้งออเดอร์ก่อน</div>';return}
+  const o=L[+($('#rkTmOrd').value||0)]||L[0],buy=o.side==='BUY';
+  if(!(buy?(o.sl<o.entry&&o.entry<o.tp):(o.tp<o.entry&&o.entry<o.sl))){out.innerHTML='<div class="warn" style="font-size:12.5px;margin-top:8px">ลำดับราคา Entry / SL / TP ไม่ถูกต้อง จึงจำลองไม่ได้</div>';return}
+  const hours=Math.min(48,Math.max(1,+$('#rkHours').value||8)),seed=Math.round(+$('#rkSeed').value||19);
+  const btn=$('#rkTmGo');btn.disabled=true;out.innerHTML='<div class="note">กำลังดึงแท่ง 5 นาทีล่าสุดจาก Binance แล้วจำลอง…</div>';
+  try{
+    const bars=await klines(S.src,'5m',S.src==='fut'?1500:1000);
+    const px=S.A?S.A.px:bars[bars.length-1].close,tol=Math.max(0.3,(S.A?S.A.atrv:1)*0.05);
+    const plan={side:o.side,entry:o.entry,sl:o.sl,tp:o.tp,px,tol,hours,runs:10000,seed};
+    const mc=RK.mc(bars,plan);if(mc.err){out.innerHTML=`<div class="warn" style="font-size:12.5px;margin-top:8px">${mc.err}</div>`;return}
+    const rp=RK.replay(bars,plan),v=RK.verdict(mc,rp),pc=x=>(x*100).toFixed(1)+'%',sg=x=>(x>=0?'+':'')+x.toFixed(2)+'R';
+    const rr=Math.abs(o.tp-o.entry)/Math.abs(o.entry-o.sl),days=(bars.length/288).toFixed(1);
+    out.innerHTML=`<div style="margin-top:10px"><span class="badge ${buy?'b-up':'b-dn'}" style="font-size:11px">${o.side}</span> <b>${o.tag||'Entry'}</b> <span class="mut">@ ${f2(o.entry)} · SL ${f2(o.sl)} · TP ${f2(o.tp)} · 1:${rr.toFixed(2)} · ${hours} ชม. · seed ${seed}</span>
+      ${mc.filled<mc.runs*0.2?`<div class="kv"><div>ราคาไม่แตะ Entry ภายใน ${hours} ชม.<b>${pc(mc.pNoFill)}</b></div><div>จำลอง<b>${mc.runs.toLocaleString('en-US')} รอบ</b></div></div>`:`<div class="kv">
+      <div>จำลอง ${mc.runs.toLocaleString('en-US')} รอบ · ชน TP ก่อน<b class="up">${pc(mc.pTP)}</b></div>
+      <div>ชน SL ก่อน<b class="dn">${pc(mc.pSL)}</b></div>
+      <div>ยังไม่ชนทั้งคู่เมื่อครบเวลา<b>${pc(mc.pOpen)}</b></div>
+      <div>ราคาไม่แตะ Entry<b>${pc(mc.pNoFill)}</b></div>
+      <div>ค่าคาดหวังเฉลี่ย (EV)<b class="${mc.evR>=0?'up':'dn'}">${sg(mc.evR)}</b></div>
+      <div>ต้องชน TP ≥ เท่าไรถึงเสมอตัว<b>${pc(mc.be)}</b></div>
+      <div>ย้อนหลังจริง ${rp.tot} จุดเริ่ม (≈ ${rp.indep} ช่วงที่ไม่ซ้อนกัน) · TP<b class="up">${pc(rp.pTP)}</b></div>
+      <div>SL<b class="dn">${pc(rp.pSL)}</b> · ค้าง ${pc(rp.pOpen)} · EV ${sg(rp.evR)}</div></div>`}
+      <div class="${v.cls}" style="font-size:13px;margin-top:8px;font-weight:600">${v.t}</div>
+      <div class="note">วิธีคิด: สุ่มแท่ง 5 นาทีจากแท่งของทองเองในชั่วโมงเดียวกันของวัน (ข้อมูลล่าสุด ≈ ${days} วัน) โดยตัดแนวโน้มเฉลี่ยออก เหลือแต่ความผันผวน · ถ้าแท่งเดียวชนทั้ง SL และ TP นับเป็น SL ก่อน · ส่วน "ย้อนหลังจริง" ใช้ระยะ SL/TP เท่าเดิมเข้าที่ราคาปิดของทุกแท่ง จึงสะท้อนแนวโน้มช่วงนั้นด้วย · ยังไม่รวม spread/ค่าคอม/ข่าว/ช่องว่างราคา — เป็นการจำลอง ไม่ใช่การพยากรณ์</div></div>`;
+  }catch(err){out.innerHTML=`<div class="warn" style="font-size:12.5px;margin-top:8px">จำลองไม่สำเร็จ: ${(err&&err.message)||err}</div>`}
+  finally{btn.disabled=false}
+}
+function bindRisk(){
+  rkFill();
+  RK_FIELDS.forEach(([id])=>{const e=$('#'+id);if(e)e.onchange=()=>{const o={};RK_FIELDS.forEach(([i,k])=>{o[k]=$('#'+i).value});RKC=RK.clean(o);rkSaveCfg();rkFill();riskRender()}});
+  $('#riskCard').addEventListener('click',rkAct);
+  $('#rkTmGo').onclick=rkRunTM;
+  riskRender();
 }
 
 /* ============ UI ============ */
@@ -1381,7 +1620,7 @@ $('#optReset').onclick=()=>{OPT=JSON.parse(JSON.stringify(OPT_DEFAULT));setOmode
 $('#resetAll').onclick=()=>{
   OFF=9;BASIS=0;S.src='spot';S.tf='1h';
   ORD={on:false,auto:false,src:'walls',slPts:25,rr:2,side:'BUY',entry:0,sl:0,tp:0,lot:0.01,t0:0,list:null};
-  try{['goldTA','goldOff','goldBasis','goldOrd','goldCfg','goldTg'].forEach(k=>localStorage.removeItem(k))}catch(e){}
+  try{['goldTA','goldOff','goldBasis','goldOrd','goldCfg','goldTg','goldRiskCfg'].forEach(k=>localStorage.removeItem(k))}catch(e){}try{rkReset()}catch(e){}
   CFG={...CFG_DEF};buildCfg();applyLabels();setOscLines();NEWTG.forEach(id=>{$(id).checked=!!TG_DEF[id]});updatePanes();indCount();
   ['#tEma','#tBb','#tVol','#tSr','#tRound'].forEach(id=>{$(id).checked=false});$('#tOpt').checked=true;
   $('#off').value=OFF;$('#ref').value='';$('#basis').value=BASIS;$('#gcpx').value='';$('#src').value=S.src;
@@ -1883,6 +2122,7 @@ setInterval(()=>{if(S.A&&wlAdd())renderWl()},10*60000);
 $('#wlClear').onclick=()=>{if(confirm('ล้างสถิติกำแพงที่บันทึกไว้ทั้งหมด?')){wlWrite([]);renderWl()}};
 
 bindOrd();
+try{bindRisk()}catch(e){console.error('risk desk',e)}
 buildTfs();load();
 
 /* ---------- นาฬิกา + เซสชันตลาด ---------- */
